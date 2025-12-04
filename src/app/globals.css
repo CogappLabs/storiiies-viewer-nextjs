@@ -9,9 +9,7 @@
 	--cogapp-gray: #717171;
 	/* Pastel accents */
 	--cogapp-pink: #ffdaea;
-	--cogapp-light-blue: #dae9ff;
 	--cogapp-lavender: #e8daff;
-	--cogapp-mint: #edffda;
 }
 
 @theme inline {
@@ -21,9 +19,7 @@
 	--color-cogapp-cream: #ebebe1;
 	--color-cogapp-gray: #717171;
 	--color-cogapp-pink: #ffdaea;
-	--color-cogapp-light-blue: #dae9ff;
 	--color-cogapp-lavender: #e8daff;
-	--color-cogapp-mint: #edffda;
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
 }
