@@ -49,8 +49,12 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="settings-dialog-title"
+			onClick={onClose}
 		>
-			<div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+			<div
+				className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<div className="p-4 border-b flex items-center justify-between">
 					<h2 className="font-medium" id="settings-dialog-title">
 						Story Settings

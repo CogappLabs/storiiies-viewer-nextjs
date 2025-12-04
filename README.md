@@ -5,7 +5,8 @@ A local-first editor for creating IIIF annotation stories. Create annotated narr
 ## Features
 
 - Create stories from any IIIF image URL
-- Draw annotation regions on images with OpenSeadragon
+- Add annotations at the current viewport position
+- Resize and reposition annotations with Annotorious
 - Drag-and-drop reordering of annotations
 - Add images to annotations
 - Preview stories in multiple IIIF viewers:
@@ -14,14 +15,17 @@ A local-first editor for creating IIIF annotation stories. Create annotated narr
   - Mirador
   - Annona
 - Export as IIIF Presentation API 3.0 manifests
+- Efficient tiled image rendering via IIIF Image API
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
 - **Database**: SQLite via Prisma
 - **Styling**: Tailwind CSS 4
-- **Image Viewer**: OpenSeadragon with Annotorious
+- **Image Viewer**: OpenSeadragon with IIIF tiled rendering
+- **Annotations**: Annotorious for OpenSeadragon
 - **Drag & Drop**: @hello-pangea/dnd
+- **Linting/Formatting**: Biome
 
 ## Getting Started
 
@@ -81,19 +85,21 @@ src/
 
 ## Usage
 
-1. **Create a Story**: Enter a IIIF image URL (info.json) on the home page
-2. **Add Annotations**: Click "Add" and draw rectangles on the image
-3. **Edit Content**: Add text and optional images to each annotation
-4. **Reorder**: Drag annotations to change their order
-5. **Preview**: Use the "Share" button to preview in different IIIF viewers
-6. **Export**: Copy the manifest URL to use in any IIIF-compatible viewer
+1. **Create a Story**: Enter a IIIF image URL on the home page
+2. **Add Annotations**: Navigate to your desired view, then click "Add" to create an annotation at the current viewport
+3. **Adjust Region**: Resize or reposition the annotation rectangle as needed
+4. **Edit Content**: Add text and optional images to each annotation
+5. **Reorder**: Drag annotations to change their order in the story
+6. **Preview**: Use the "Share" button to preview in different IIIF viewers
+7. **Export**: Copy the manifest URL to use in any IIIF-compatible viewer
 
 ## Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+- `npx biome check` - Run linting and formatting checks
+- `npx biome check --write` - Auto-fix linting and formatting issues
 
 ## License
 

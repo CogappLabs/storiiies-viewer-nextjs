@@ -44,11 +44,16 @@ body {
 
 /* Crosshairs while drawing (selection) */
 .a9s-selection .crosshair-group line {
-  stroke: #ef4444 !important;
+  stroke: #717171 !important;
   stroke-dasharray: 4 2;
 }
 
 /* Selected annotation crosshairs */
 .a9s-annotation.selected .crosshair-group line {
-  stroke: #22c55e !important;
+  stroke: #717171 !important;
+}
+
+/* Hide crosshairs when toggled off */
+.hide-crosshairs .crosshair-group {
+  display: none;
 }

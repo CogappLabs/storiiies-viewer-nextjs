@@ -116,7 +116,7 @@ const AnnotationList = ({
 										{...provided.draggableProps}
 										className={`p-3 rounded-md border ${
 											selectedId === annotation.id
-												? "border-cogapp-blue bg-cogapp-light-blue"
+												? "border-cogapp-lavender bg-cogapp-lavender"
 												: "border-gray-200 bg-white"
 										} ${snapshot.isDragging ? "shadow-lg" : ""} ${
 											isPending ? "opacity-50" : ""

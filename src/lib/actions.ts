@@ -26,7 +26,7 @@ const getPositiveInt = (formData: FormData, key: string): number => {
 		throw new Error(`Missing or invalid field: ${key}`);
 	}
 	const num = parseInt(value, 10);
-	if (isNaN(num) || num <= 0) {
+	if (Number.isNaN(num) || num <= 0) {
 		throw new Error(`${key} must be a positive number`);
 	}
 	return num;
@@ -39,6 +39,29 @@ const isValidUrl = (url: string): boolean => {
 		return true;
 	} catch {
 		return false;
+	}
+};
+
+// Validate annotation coordinates
+const validateCoordinates = (coords: {
+	x?: number;
+	y?: number;
+	width?: number;
+	height?: number;
+}): void => {
+	const { x, y, width, height } = coords;
+
+	if (x !== undefined && (typeof x !== "number" || !Number.isFinite(x) || x < 0)) {
+		throw new Error("x coordinate must be a non-negative number");
+	}
+	if (y !== undefined && (typeof y !== "number" || !Number.isFinite(y) || y < 0)) {
+		throw new Error("y coordinate must be a non-negative number");
+	}
+	if (width !== undefined && (typeof width !== "number" || !Number.isFinite(width) || width <= 0)) {
+		throw new Error("width must be a positive number");
+	}
+	if (height !== undefined && (typeof height !== "number" || !Number.isFinite(height) || height <= 0)) {
+		throw new Error("height must be a positive number");
 	}
 };
 
@@ -201,6 +224,25 @@ export const createAnnotation = async (
 			throw new Error("Story ID is required");
 		}
 
+		// Validate coordinates
+		validateCoordinates({
+			x: data.x,
+			y: data.y,
+			width: data.width,
+			height: data.height,
+		});
+
+		// Also validate viewport coordinates if provided
+		if (data.viewportX !== undefined || data.viewportY !== undefined ||
+			data.viewportWidth !== undefined || data.viewportHeight !== undefined) {
+			validateCoordinates({
+				x: data.viewportX,
+				y: data.viewportY,
+				width: data.viewportWidth,
+				height: data.viewportHeight,
+			});
+		}
+
 		// Validate image URLs if provided
 		const validImageUrls = data.imageUrls?.filter((url) => {
 			if (!url.trim()) return false;
@@ -264,6 +306,14 @@ export const updateAnnotation = async (
 		if (!id || !storyId) {
 			throw new Error("Annotation ID and Story ID are required");
 		}
+
+		// Validate coordinates if provided
+		validateCoordinates({
+			x: data.x,
+			y: data.y,
+			width: data.width,
+			height: data.height,
+		});
 
 		const annotation = await prisma.annotation.update({
 			where: { id },

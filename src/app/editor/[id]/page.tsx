@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import Editor from "@/components/Editor";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { getStory } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditorPage({
+const EditorPage = async ({
 	params,
 }: {
 	params: Promise<{ id: string }>;
-}) {
+}) => {
 	const { id } = await params;
 	const story = await getStory(id);
 
@@ -16,5 +17,11 @@ export default async function EditorPage({
 		notFound();
 	}
 
-	return <Editor story={story} />;
-}
+	return (
+		<ErrorBoundary>
+			<Editor story={story} />
+		</ErrorBoundary>
+	);
+};
+
+export default EditorPage;

@@ -1,12 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
 	Annotation,
 	AnnotationImage,
 	Story,
 } from "@/generated/prisma/client";
+import type { AnnotatedViewerHandle } from "./AnnotatedViewer";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
 
@@ -31,13 +32,14 @@ interface Props {
 }
 
 const Editor = ({ story }: Props) => {
+	const viewerRef = useRef<AnnotatedViewerHandle>(null);
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<
 		string | null
 	>(null);
-	const [drawingEnabled, setDrawingEnabled] = useState(false);
 	const [showSettings, setShowSettings] = useState(false);
 	const [showManifestLink, setShowManifestLink] = useState(false);
 	const [manifestUrl, setManifestUrl] = useState("");
+	const [showCrosshairs, setShowCrosshairs] = useState(false);
 	const [pendingData, setPendingData] = useState<{
 		rect: { x: number; y: number; width: number; height: number };
 		viewport: { x: number; y: number; width: number; height: number };
@@ -49,12 +51,11 @@ const Editor = ({ story }: Props) => {
 		}
 	}, [story.id]);
 
-	const handleAnnotationCreate = (data: {
-		rect: { x: number; y: number; width: number; height: number };
-		viewport: { x: number; y: number; width: number; height: number };
-	}) => {
-		setPendingData(data);
-		setDrawingEnabled(false);
+	const handleAddAnnotation = () => {
+		const bounds = viewerRef.current?.getViewportBounds();
+		if (bounds) {
+			setPendingData(bounds);
+		}
 	};
 
 	return (
@@ -71,7 +72,7 @@ const Editor = ({ story }: Props) => {
 							aria-expanded={showManifestLink}
 							aria-haspopup="dialog"
 						>
-							Share
+							Preview and share
 						</Button>
 						<Button
 							variant="secondary"
@@ -102,18 +103,7 @@ const Editor = ({ story }: Props) => {
 				>
 					<div className="p-4 border-b flex items-center justify-between">
 						<h2 className="font-medium">Annotations</h2>
-						<button
-							type="button"
-							onClick={() => setDrawingEnabled(!drawingEnabled)}
-							className={`px-3 pt-2 pb-1.5 text-base font-medium leading-7 border focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2 transition-colors ${
-								drawingEnabled
-									? "bg-cogapp-charcoal text-cogapp-cream border-cogapp-charcoal"
-									: "bg-cogapp-cream text-cogapp-charcoal border-cogapp-charcoal hover:bg-cogapp-charcoal hover:text-cogapp-cream"
-							}`}
-							aria-pressed={drawingEnabled}
-						>
-							{drawingEnabled ? "Drawing..." : "Add"}
-						</button>
+						<Button onClick={handleAddAnnotation}>Add</Button>
 					</div>
 
 					<div className="flex-1 overflow-y-auto p-4">
@@ -138,14 +128,15 @@ const Editor = ({ story }: Props) => {
 				{/* Viewer */}
 				<div className="flex-1 relative">
 					<AnnotatedViewer
-						imageUrl={`${story.imageUrl}/full/max/0/default.jpg`}
+						ref={viewerRef}
+						imageUrl={story.imageUrl}
 						imageWidth={story.imageWidth}
 						imageHeight={story.imageHeight}
 						annotations={story.annotations}
-						onAnnotationCreate={handleAnnotationCreate}
 						onAnnotationSelect={setSelectedAnnotationId}
 						selectedAnnotationId={selectedAnnotationId}
-						drawingEnabled={drawingEnabled}
+						showCrosshairs={showCrosshairs}
+						onToggleCrosshairs={() => setShowCrosshairs(!showCrosshairs)}
 					/>
 				</div>
 			</div>
