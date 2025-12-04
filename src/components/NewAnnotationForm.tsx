@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { createAnnotation } from "@/lib/actions";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
 interface PendingData {
@@ -22,9 +23,35 @@ const NewAnnotationForm = ({
 	onSave,
 	onCancel,
 }: NewAnnotationFormProps) => {
+	type ImageField = { id: string; value: string };
+	const createImageField = (value = ""): ImageField => ({
+		id: crypto.randomUUID(),
+		value,
+	});
+
 	const [isPending, startTransition] = useTransition();
 	const [text, setText] = useState("");
-	const [imageUrls, setImageUrls] = useState<string[]>([]);
+	const [imageFields, setImageFields] = useState<ImageField[]>([]);
+	const strings = useStrings();
+	const textAreaId = useId();
+
+	const dataPreview = useMemo(() => {
+		try {
+			return JSON.stringify(
+				{
+					rect: pendingData.rect,
+					viewport: pendingData.viewport,
+					imageUrls: imageFields
+						.map((field) => field.value.trim())
+						.filter((value) => value),
+				},
+				null,
+				2,
+			);
+		} catch {
+			return null;
+		}
+	}, [imageFields, pendingData]);
 
 	const handleSave = () => {
 		startTransition(async () => {
@@ -38,82 +65,96 @@ const NewAnnotationForm = ({
 				viewportY: pendingData.viewport.y,
 				viewportWidth: pendingData.viewport.width,
 				viewportHeight: pendingData.viewport.height,
-				imageUrls: imageUrls.filter((url) => url.trim() !== ""),
+				imageUrls: imageFields
+					.map((field) => field.value.trim())
+					.filter((url) => url !== ""),
 			});
 			onSave();
 		});
 	};
 
 	return (
-		<div className="mb-4 p-3 border-2 border-cogapp-blue rounded-md bg-cogapp-light-blue">
-			<label className="block text-sm font-medium mb-2">Annotation text</label>
+		<div className="mb-4 p-3 border-2 border-cogapp-lavender rounded-md bg-cogapp-lavender/40">
+			<label htmlFor={textAreaId} className="block text-sm font-medium mb-2">
+				{strings.newAnnotationForm.textLabel}
+			</label>
 			<textarea
+				id={textAreaId}
 				value={text}
 				onChange={(e) => setText(e.target.value)}
 				className="w-full px-2 py-1 border rounded text-sm"
 				rows={3}
-				placeholder="Enter annotation text..."
-				autoFocus
+				placeholder={strings.newAnnotationForm.placeholder}
 			/>
 
 			<div className="mt-3">
-				<label className="block text-sm font-medium mb-2">
-					Images (optional)
-				</label>
-				{imageUrls.map((url, index) => (
-					<div key={index} className="flex gap-2 mb-2">
+				<p className="block text-sm font-medium mb-2">
+					{strings.newAnnotationForm.imagesLabel}
+				</p>
+				{imageFields.map((field) => (
+					<div key={field.id} className="flex gap-2 mb-2">
 						<input
 							type="url"
-							value={url}
+							value={field.value}
 							onChange={(e) => {
-								const newUrls = [...imageUrls];
-								newUrls[index] = e.target.value;
-								setImageUrls(newUrls);
+								setImageFields((current) =>
+									current.map((item) =>
+										item.id === field.id
+											? { ...item, value: e.target.value }
+											: item,
+									),
+								);
 							}}
 							className="flex-1 px-2 py-1 border rounded text-sm"
-							placeholder="https://example.com/image.jpg"
+							placeholder={strings.newAnnotationForm.imagePlaceholder}
 						/>
 						<Button
 							variant="danger"
 							size="sm"
 							onClick={() => {
-								setImageUrls(imageUrls.filter((_, i) => i !== index));
+								setImageFields((current) =>
+									current.filter((item) => item.id !== field.id),
+								);
 							}}
 						>
-							Remove
+							{strings.newAnnotationForm.removeImage}
 						</Button>
 					</div>
 				))}
 				<button
 					type="button"
-					onClick={() => setImageUrls([...imageUrls, ""])}
-					className="text-sm text-blue-600 hover:text-blue-800"
+					onClick={() =>
+						setImageFields((current) => [...current, createImageField()])
+					}
+					className="text-sm text-cogapp-charcoal hover:text-cogapp-charcoal/70"
 				>
-					+ Add image URL
+					+ {strings.newAnnotationForm.addImage}
 				</button>
 			</div>
 
 			<div className="flex gap-2 mt-3">
 				<Button size="sm" onClick={handleSave} disabled={isPending}>
-					{isPending ? "Saving..." : "Save"}
+					{isPending
+						? strings.newAnnotationForm.saving
+						: strings.newAnnotationForm.save}
 				</Button>
 				<Button variant="secondary" size="sm" onClick={onCancel}>
-					Cancel
+					{strings.newAnnotationForm.cancel}
 				</Button>
 			</div>
 			<details className="mt-3 text-xs">
-				<summary className="cursor-pointer text-gray-500">Data</summary>
-				<pre className="mt-1 p-2 bg-white rounded text-gray-600 overflow-x-auto">
-					{JSON.stringify(
-						{
-							rect: pendingData.rect,
-							viewport: pendingData.viewport,
-							imageUrls: imageUrls.filter((u) => u.trim()),
-						},
-						null,
-						2,
-					)}
-				</pre>
+				<summary className="cursor-pointer text-gray-500">
+					{strings.common.data}
+				</summary>
+				{dataPreview ? (
+					<pre className="mt-1 p-2 bg-white rounded text-gray-600 overflow-x-auto">
+						{dataPreview}
+					</pre>
+				) : (
+					<p className="mt-1 p-2 bg-white rounded text-red-600 text-xs">
+						{strings.newAnnotationForm.previewUnavailable}
+					</p>
+				)}
 			</details>
 		</div>
 	);

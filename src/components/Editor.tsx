@@ -7,6 +7,7 @@ import type {
 	AnnotationImage,
 	Story,
 } from "@/generated/prisma/client";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 import type { AnnotatedViewerHandle } from "./AnnotatedViewer";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
@@ -44,6 +45,7 @@ const Editor = ({ story }: Props) => {
 		rect: { x: number; y: number; width: number; height: number };
 		viewport: { x: number; y: number; width: number; height: number };
 	} | null>(null);
+	const strings = useStrings();
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -62,7 +64,7 @@ const Editor = ({ story }: Props) => {
 		<div className="h-screen flex flex-col">
 			<Header
 				title={story.title}
-				backLink={{ href: "/", label: "Back" }}
+				backLink={{ href: "/", label: strings.common.back }}
 				fullWidth
 				actions={
 					<>
@@ -72,7 +74,7 @@ const Editor = ({ story }: Props) => {
 							aria-expanded={showManifestLink}
 							aria-haspopup="dialog"
 						>
-							Preview and share
+							{strings.editor.previewButton}
 						</Button>
 						<Button
 							variant="secondary"
@@ -80,7 +82,7 @@ const Editor = ({ story }: Props) => {
 							aria-expanded={showSettings}
 							aria-haspopup="dialog"
 						>
-							Settings
+							{strings.editor.settingsButton}
 						</Button>
 					</>
 				}
@@ -99,11 +101,13 @@ const Editor = ({ story }: Props) => {
 				{/* Sidebar - Left side */}
 				<aside
 					className="w-80 border-r bg-white flex flex-col"
-					aria-label="Annotations sidebar"
+					aria-label={strings.editor.sidebarLabel}
 				>
 					<div className="p-4 border-b flex items-center justify-between">
-						<h2 className="font-medium">Annotations</h2>
-						<Button onClick={handleAddAnnotation}>Add</Button>
+						<h2 className="font-medium">{strings.editor.annotationsHeading}</h2>
+						<Button onClick={handleAddAnnotation}>
+							{strings.editor.addButton}
+						</Button>
 					</div>
 
 					<div className="flex-1 overflow-y-auto p-4">

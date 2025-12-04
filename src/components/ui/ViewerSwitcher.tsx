@@ -1,31 +1,37 @@
+"use client";
+
 import Link from "next/link";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 interface ViewerSwitcherProps {
 	storyId: string;
 	current: "storiiies" | "clover" | "mirador" | "annona";
 }
 
-const viewers = [
-	{ id: "storiiies", label: "Storiiies" },
-	{ id: "clover", label: "Clover" },
-	{ id: "mirador", label: "Mirador" },
-	{ id: "annona", label: "Annona" },
-] as const;
+const ViewerSwitcher = ({ storyId, current }: ViewerSwitcherProps) => {
+	const strings = useStrings();
+	const viewers = [
+		{ id: "storiiies", label: strings.viewers.storiiies },
+		{ id: "clover", label: strings.viewers.clover },
+		{ id: "mirador", label: strings.viewers.mirador },
+		{ id: "annona", label: strings.viewers.annona },
+	] as const;
 
-const ViewerSwitcher = ({ storyId, current }: ViewerSwitcherProps) => (
-	<>
-		{viewers
-			.filter((v) => v.id !== current)
-			.map((viewer) => (
-				<Link
-					key={viewer.id}
-					href={`/preview/${viewer.id}/${storyId}`}
-					className="px-3 py-1.5 text-sm bg-cogapp-cream text-cogapp-charcoal rounded hover:bg-white"
-				>
-					{viewer.label}
-				</Link>
-			))}
-	</>
-);
+	return (
+		<>
+			{viewers
+				.filter((v) => v.id !== current)
+				.map((viewer) => (
+					<Link
+						key={viewer.id}
+						href={`/preview/${viewer.id}/${storyId}`}
+						className="px-3 py-1.5 text-sm bg-cogapp-cream text-cogapp-charcoal rounded hover:bg-white"
+					>
+						{viewer.label}
+					</Link>
+				))}
+		</>
+	);
+};
 
 export default ViewerSwitcher;

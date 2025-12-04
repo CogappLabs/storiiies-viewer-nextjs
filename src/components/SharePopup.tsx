@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trapFocus } from "@/lib/a11y";
+import { UI_CONFIG } from "@/lib/config";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
 interface SharePopupProps {
@@ -11,6 +14,10 @@ interface SharePopupProps {
 
 const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 	const [copied, setCopied] = useState(false);
+	const dialogRef = useRef<HTMLDivElement>(null);
+	const manifestInputRef = useRef<HTMLInputElement>(null);
+	const returnFocusRef = useRef<Element | null>(null);
+	const strings = useStrings();
 
 	// Close on Escape key
 	useEffect(() => {
@@ -18,36 +25,54 @@ const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 			if (e.key === "Escape") {
 				onClose();
 			}
+			trapFocus(dialogRef.current, e);
 		};
+		returnFocusRef.current = document.activeElement;
+		const focusTarget = manifestInputRef.current || dialogRef.current;
+		focusTarget?.focus();
+
 		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			const previous = returnFocusRef.current;
+			if (previous instanceof HTMLElement) {
+				previous.focus();
+			}
+		};
 	}, [onClose]);
 
 	const copyManifestUrl = async () => {
 		await navigator.clipboard.writeText(manifestUrl);
 		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		setTimeout(() => setCopied(false), UI_CONFIG.sharePopupCopyTimeoutMs);
 	};
 
 	return (
 		<>
 			{/* Backdrop */}
 			<div
-				className="fixed inset-0 z-40"
+				className="fixed inset-0 z-40 bg-black/40"
 				onClick={onClose}
-				onKeyDown={(e) => e.key === "Escape" && onClose()}
 				aria-hidden="true"
 			/>
-			<div className="absolute top-14 right-4 bg-white border rounded-lg shadow-lg p-4 z-50 w-96">
+			<div
+				ref={dialogRef}
+				className="absolute top-14 right-4 bg-white border rounded-lg shadow-lg p-4 z-50 w-96"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="share-dialog-title"
+				aria-describedby="share-dialog-description"
+				tabIndex={-1}
+			>
 				<div className="flex items-center justify-between mb-2">
 					<h3 className="font-medium" id="share-dialog-title">
-						IIIF Manifest URL
+						{strings.sharePopup.title}
 					</h3>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-						aria-label="Close share dialog"
+						className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
+						aria-label={strings.common.close}
 					>
 						✕
 					</button>
@@ -57,42 +82,45 @@ const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 						type="text"
 						value={manifestUrl}
 						readOnly
-						aria-label="IIIF Manifest URL"
+						aria-label={strings.sharePopup.title}
+						ref={manifestInputRef}
 						className="flex-1 px-3 py-2 border rounded text-sm bg-gray-50"
 					/>
 					<Button onClick={copyManifestUrl}>
-						{copied ? "Copied!" : "Copy"}
+						{copied ? strings.sharePopup.copied : strings.sharePopup.copy}
 					</Button>
 				</div>
-				<p className="text-xs text-gray-500 mt-2">
-					Use this URL to view your story in any IIIF-compatible viewer.
+				<p className="text-xs text-gray-500 mt-2" id="share-dialog-description">
+					{strings.sharePopup.instructions}
 				</p>
 				<div className="mt-3 pt-3 border-t">
-					<p className="text-xs text-gray-500 mb-2">Preview in:</p>
+					<p className="text-xs text-gray-500 mb-2">
+						{strings.sharePopup.previewHeading}
+					</p>
 					<div className="flex gap-2 flex-wrap">
 						<a
 							href={`/preview/storiiies/${storyId}`}
 							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
 						>
-							Storiiies
+							{strings.viewers.storiiies}
 						</a>
 						<a
 							href={`/preview/clover/${storyId}`}
 							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
 						>
-							Clover
+							{strings.viewers.clover}
 						</a>
 						<a
 							href={`/preview/mirador/${storyId}`}
 							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
 						>
-							Mirador
+							{strings.viewers.mirador}
 						</a>
 						<a
 							href={`/preview/annona/${storyId}`}
 							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
 						>
-							Annona
+							{strings.viewers.annona}
 						</a>
 					</div>
 				</div>

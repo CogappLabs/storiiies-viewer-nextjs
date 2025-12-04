@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import { Header, ViewerSwitcher } from "@/components/ui";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 const AnnonaPreview = () => {
 	const params = useParams();
@@ -11,6 +12,8 @@ const AnnonaPreview = () => {
 	const [manifestUrl, setManifestUrl] = useState("");
 	const [scriptsLoaded, setScriptsLoaded] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const strings = useStrings();
+	const viewerLabel = strings.common.viewer(strings.viewers.annona);
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -47,8 +50,11 @@ const AnnonaPreview = () => {
 			/>
 
 			<Header
-				title="Annona Viewer"
-				backLink={{ href: `/editor/${id}`, label: "Back to Editor" }}
+				title={viewerLabel}
+				backLink={{
+					href: `/editor/${id}`,
+					label: strings.preview.backToEditor,
+				}}
 				fullWidth
 				actions={<ViewerSwitcher storyId={id} current="annona" />}
 			/>
@@ -58,7 +64,7 @@ const AnnonaPreview = () => {
 					<div ref={containerRef} className="h-full w-full" />
 				) : (
 					<div className="flex items-center justify-center h-full text-gray-500">
-						Loading Annona...
+						{strings.preview.loadingAnnona}
 					</div>
 				)}
 			</div>

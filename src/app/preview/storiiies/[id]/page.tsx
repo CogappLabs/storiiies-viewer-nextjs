@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Header, ViewerSwitcher } from "@/components/ui";
 import "@cogapp/storiiies-viewer/dist/storiiies-viewer.css";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 const StoriiiesPreview = () => {
 	const params = useParams();
@@ -11,6 +12,9 @@ const StoriiiesPreview = () => {
 	const [manifestUrl, setManifestUrl] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const viewerRef = useRef<unknown>(null);
+	const strings = useStrings();
+	const viewerLabel = strings.common.viewer(strings.viewers.storiiies);
+	const { errorLoading, errorGeneric } = strings.preview;
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -39,21 +43,28 @@ const StoriiiesPreview = () => {
 						manifestUrl: manifestUrl,
 					});
 				} catch (err) {
-					setError(
-						err instanceof Error ? err.message : "Failed to load viewer",
-					);
+					const message = err instanceof Error ? err.message : errorGeneric;
+					setError(errorLoading(viewerLabel, message));
 				}
 			})
 			.catch((err) => {
-				setError(`Failed to load StoriiiesViewer: ${err.message}`);
+				setError(
+					errorLoading(
+						viewerLabel,
+						err instanceof Error ? err.message : errorGeneric,
+					),
+				);
 			});
-	}, [manifestUrl]);
+	}, [errorGeneric, errorLoading, manifestUrl, viewerLabel]);
 
 	return (
 		<div className="h-screen flex flex-col">
 			<Header
-				title="Storiiies Viewer"
-				backLink={{ href: `/editor/${id}`, label: "Back to Editor" }}
+				title={viewerLabel}
+				backLink={{
+					href: `/editor/${id}`,
+					label: strings.preview.backToEditor,
+				}}
 				fullWidth
 				actions={<ViewerSwitcher storyId={id} current="storiiies" />}
 			/>

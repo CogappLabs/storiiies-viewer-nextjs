@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import type { Story } from "@/generated/prisma/client";
+import { trapFocus } from "@/lib/a11y";
 import { deleteStory, updateStory } from "@/lib/actions";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
 interface StorySettingsModalProps {
@@ -12,6 +14,10 @@ interface StorySettingsModalProps {
 
 const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 	const [isPending, startTransition] = useTransition();
+	const strings = useStrings();
+	const dialogRef = useRef<HTMLDivElement>(null);
+	const titleInputRef = useRef<HTMLInputElement>(null);
+	const returnFocusRef = useRef<Element | null>(null);
 
 	// Close on Escape key
 	useEffect(() => {
@@ -19,9 +25,20 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 			if (e.key === "Escape") {
 				onClose();
 			}
+			trapFocus(dialogRef.current, e);
 		};
+		returnFocusRef.current = document.activeElement;
+		const focusTarget = titleInputRef.current || dialogRef.current;
+		focusTarget?.focus();
+
 		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			const previous = returnFocusRef.current;
+			if (previous instanceof HTMLElement) {
+				previous.focus();
+			}
+		};
 	}, [onClose]);
 
 	const handleUpdateStory = (formData: FormData) => {
@@ -32,11 +49,7 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 	};
 
 	const handleDeleteStory = () => {
-		if (
-			confirm(
-				"Are you sure you want to delete this story? This cannot be undone.",
-			)
-		) {
+		if (confirm(strings.storySettings.deleteConfirm)) {
 			startTransition(() => {
 				deleteStory(story.id);
 			});
@@ -44,26 +57,29 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 	};
 
 	return (
-		<div
-			className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="settings-dialog-title"
-			onClick={onClose}
-		>
+		<div className="fixed inset-0 z-50 flex items-center justify-center relative">
 			<div
-				className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
-				onClick={(e) => e.stopPropagation()}
+				className="absolute inset-0 bg-black/50"
+				onClick={onClose}
+				aria-hidden="true"
+			/>
+			<div
+				ref={dialogRef}
+				className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="settings-dialog-title"
+				tabIndex={-1}
 			>
 				<div className="p-4 border-b flex items-center justify-between">
 					<h2 className="font-medium" id="settings-dialog-title">
-						Story Settings
+						{strings.storySettings.title}
 					</h2>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-						aria-label="Close settings"
+						className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
+						aria-label={strings.common.close}
 					>
 						✕
 					</button>
@@ -74,13 +90,14 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 							htmlFor="story-title"
 							className="block text-sm font-medium mb-1"
 						>
-							Title
+							{strings.storySettings.titleLabel}
 						</label>
 						<input
 							id="story-title"
 							name="title"
 							defaultValue={story.title}
-							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+							ref={titleInputRef}
+							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 							required
 						/>
 					</div>
@@ -89,13 +106,13 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 							htmlFor="story-author"
 							className="block text-sm font-medium mb-1"
 						>
-							Author
+							{strings.storySettings.authorLabel}
 						</label>
 						<input
 							id="story-author"
 							name="author"
 							defaultValue={story.author || ""}
-							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 						/>
 					</div>
 					<div>
@@ -103,13 +120,13 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 							htmlFor="story-description"
 							className="block text-sm font-medium mb-1"
 						>
-							Description
+							{strings.storySettings.descriptionLabel}
 						</label>
 						<textarea
 							id="story-description"
 							name="description"
 							defaultValue={story.description || ""}
-							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 							rows={3}
 						/>
 					</div>
@@ -118,21 +135,21 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 							htmlFor="story-attribution"
 							className="block text-sm font-medium mb-1"
 						>
-							Attribution
+							{strings.storySettings.attributionLabel}
 						</label>
 						<input
 							id="story-attribution"
 							name="attribution"
 							defaultValue={story.attribution || ""}
-							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+							className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 						/>
 					</div>
 					<div className="flex justify-between pt-4 border-t">
 						<Button variant="danger" onClick={handleDeleteStory}>
-							Delete Story
+							{strings.storySettings.deleteButton}
 						</Button>
 						<Button type="submit" disabled={isPending}>
-							Save Changes
+							{strings.storySettings.saveButton}
 						</Button>
 					</div>
 				</form>

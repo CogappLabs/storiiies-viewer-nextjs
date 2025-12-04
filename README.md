@@ -4,7 +4,7 @@ A local-first editor for creating IIIF annotation stories. Create annotated narr
 
 ## Features
 
-- Create stories from any IIIF image URL
+ - Create stories from IIIF image or manifest URLs
 - Add annotations at the current viewport position
 - Resize and reposition annotations with Annotorious
 - Drag-and-drop reordering of annotations
@@ -100,6 +100,10 @@ src/
 - `npm run start` - Start production server
 - `npx biome check` - Run linting and formatting checks
 - `npx biome check --write` - Auto-fix linting and formatting issues
+
+## Todo
+
+- [ ] Handle manifest inputs on the homepage: if a user pastes a manifest instead of an `info.json`, parse its canvases, show a picker UI for each image, and then continue using the chosen canvas' `info.json`.
 
 ## License
 

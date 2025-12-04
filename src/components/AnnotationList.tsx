@@ -15,6 +15,7 @@ import {
 	updateAnnotation,
 	updateAnnotationImages,
 } from "@/lib/actions";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
 
@@ -25,6 +26,13 @@ interface Props {
 	onSelect: (id: string | null) => void;
 }
 
+type ImageField = { id: string; value: string };
+
+const createImageField = (value = ""): ImageField => ({
+	id: crypto.randomUUID(),
+	value,
+});
+
 const AnnotationList = ({
 	storyId,
 	annotations,
@@ -33,8 +41,9 @@ const AnnotationList = ({
 }: Props) => {
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editText, setEditText] = useState("");
-	const [editImageUrls, setEditImageUrls] = useState<string[]>([]);
+	const [editImageFields, setEditImageFields] = useState<ImageField[]>([]);
 	const [isPending, startTransition] = useTransition();
+	const strings = useStrings();
 
 	const handleDragEnd = (result: DropResult) => {
 		if (!result.destination) return;
@@ -54,7 +63,9 @@ const AnnotationList = ({
 	const startEditing = (annotation: AnnotationWithImages) => {
 		setEditingId(annotation.id);
 		setEditText(annotation.text);
-		setEditImageUrls(annotation.images.map((img) => img.imageUrl));
+		setEditImageFields(
+			annotation.images.map((img) => ({ id: img.id, value: img.imageUrl })),
+		);
 	};
 
 	const saveEdit = () => {
@@ -62,22 +73,24 @@ const AnnotationList = ({
 
 		startTransition(async () => {
 			await updateAnnotation(editingId, storyId, { text: editText });
-			const filteredUrls = editImageUrls.filter((url) => url.trim() !== "");
+			const filteredUrls = editImageFields
+				.map((field) => field.value.trim())
+				.filter((url) => url !== "");
 			await updateAnnotationImages(editingId, storyId, filteredUrls);
 			setEditingId(null);
 			setEditText("");
-			setEditImageUrls([]);
+			setEditImageFields([]);
 		});
 	};
 
 	const cancelEdit = () => {
 		setEditingId(null);
 		setEditText("");
-		setEditImageUrls([]);
+		setEditImageFields([]);
 	};
 
 	const handleDelete = (id: string) => {
-		if (confirm("Delete this annotation?")) {
+		if (confirm(strings.annotationList.deleteConfirm)) {
 			startTransition(() => {
 				deleteAnnotation(id, storyId);
 				if (selectedId === id) {
@@ -90,7 +103,7 @@ const AnnotationList = ({
 	if (annotations.length === 0) {
 		return (
 			<div className="text-gray-500 text-center py-8">
-				No annotations yet. Click "Add" and drag on the image to create one.
+				{strings.annotationList.noItems}
 			</div>
 		);
 	}
@@ -111,6 +124,7 @@ const AnnotationList = ({
 								index={index}
 							>
 								{(provided, snapshot) => (
+									// biome-ignore lint/a11y/useSemanticElements: Nested action buttons prevent us from rendering this container as a <button>.
 									<div
 										ref={provided.innerRef}
 										{...provided.draggableProps}
@@ -121,7 +135,16 @@ const AnnotationList = ({
 										} ${snapshot.isDragging ? "shadow-lg" : ""} ${
 											isPending ? "opacity-50" : ""
 										}`}
+										role="button"
+										tabIndex={0}
 										onClick={() => onSelect(annotation.id)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter" || event.key === " ") {
+												event.preventDefault();
+												onSelect(annotation.id);
+											}
+										}}
+										aria-pressed={selectedId === annotation.id}
 									>
 										<div className="flex items-start gap-2">
 											<div
@@ -156,31 +179,36 @@ const AnnotationList = ({
 															onChange={(e) => setEditText(e.target.value)}
 															className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
 															rows={3}
-															autoFocus
 														/>
 														<div>
-															<label className="block text-xs text-gray-500 mb-1">
-																Images
-															</label>
-															{editImageUrls.map((url, index) => (
-																<div key={index} className="flex gap-1 mb-1">
+															<p className="block text-xs text-gray-500 mb-1">
+																{strings.annotationList.imagesLabel}
+															</p>
+															{editImageFields.map((field) => (
+																<div key={field.id} className="flex gap-1 mb-1">
 																	<input
 																		type="url"
-																		value={url}
+																		value={field.value}
 																		onChange={(e) => {
-																			const newUrls = [...editImageUrls];
-																			newUrls[index] = e.target.value;
-																			setEditImageUrls(newUrls);
+																			setEditImageFields((current) =>
+																				current.map((item) =>
+																					item.id === field.id
+																						? { ...item, value: e.target.value }
+																						: item,
+																				),
+																			);
 																		}}
 																		className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
-																		placeholder="https://example.com/image.jpg"
+																		placeholder={
+																			strings.newAnnotationForm.imagePlaceholder
+																		}
 																	/>
 																	<button
 																		type="button"
 																		onClick={() => {
-																			setEditImageUrls(
-																				editImageUrls.filter(
-																					(_, i) => i !== index,
+																			setEditImageFields((current) =>
+																				current.filter(
+																					(item) => item.id !== field.id,
 																				),
 																			);
 																		}}
@@ -193,27 +221,30 @@ const AnnotationList = ({
 															<button
 																type="button"
 																onClick={() =>
-																	setEditImageUrls([...editImageUrls, ""])
+																	setEditImageFields((current) => [
+																		...current,
+																		createImageField(),
+																	])
 																}
-																className="text-xs text-blue-600 hover:text-blue-800"
+																className="text-xs text-cogapp-charcoal hover:text-cogapp-charcoal/70"
 															>
-																+ Add image
+																{strings.newAnnotationForm.addImage}
 															</button>
 														</div>
 														<div className="flex gap-2">
 															<button
 																type="button"
 																onClick={saveEdit}
-																className="px-2 py-1 bg-cogapp-charcoal text-white text-xs rounded hover:bg-cogapp-charcoal/90 focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+																className="px-2 py-1 bg-cogapp-charcoal text-white text-xs rounded hover:bg-cogapp-charcoal/90 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 															>
-																Save
+																{strings.newAnnotationForm.save}
 															</button>
 															<button
 																type="button"
 																onClick={cancelEdit}
-																className="px-2 py-1 bg-cogapp-cream text-cogapp-charcoal text-xs rounded hover:bg-white focus:outline-none focus:ring-2 focus:ring-cogapp-blue"
+																className="px-2 py-1 bg-cogapp-cream text-cogapp-charcoal text-xs rounded hover:bg-white focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 															>
-																Cancel
+																{strings.newAnnotationForm.cancel}
 															</button>
 														</div>
 													</div>
@@ -222,7 +253,7 @@ const AnnotationList = ({
 														<p className="text-sm whitespace-pre-wrap">
 															{annotation.text || (
 																<span className="text-gray-400 italic">
-																	No text
+																	{strings.annotationList.noText}
 																</span>
 															)}
 														</p>
@@ -232,7 +263,7 @@ const AnnotationList = ({
 																	<Image
 																		key={img.id}
 																		src={img.imageUrl}
-																		alt="Annotation image"
+																		alt={strings.annotationList.imageAlt}
 																		width={48}
 																		height={48}
 																		className="w-12 h-12 object-cover rounded border"
@@ -243,11 +274,13 @@ const AnnotationList = ({
 														)}
 														<details className="mt-2 text-xs">
 															<summary className="cursor-pointer text-gray-400 hover:text-gray-600">
-																Data
+																{strings.annotationList.dataSummary}
 															</summary>
 															<div className="mt-1 p-2 bg-gray-50 rounded text-gray-500 font-mono space-y-1 break-all overflow-hidden">
 																<div>
-																	<span className="text-gray-400">rect:</span>{" "}
+																	<span className="text-gray-400">
+																		{strings.annotationList.rectLabel}:
+																	</span>{" "}
 																	x={Math.round(annotation.x)}, y=
 																	{Math.round(annotation.y)}, w=
 																	{Math.round(annotation.width)}, h=
@@ -256,7 +289,7 @@ const AnnotationList = ({
 																{annotation.viewportX !== null && (
 																	<div>
 																		<span className="text-gray-400">
-																			viewport:
+																			{strings.annotationList.viewportLabel}:
 																		</span>{" "}
 																		x={Math.round(annotation.viewportX ?? 0)},
 																		y=
@@ -269,7 +302,7 @@ const AnnotationList = ({
 																{annotation.images.length > 0 && (
 																	<div>
 																		<span className="text-gray-400">
-																			images:
+																			{strings.annotationList.imagesLabel}:
 																		</span>{" "}
 																		{annotation.images
 																			.map((img) => img.imageUrl)
@@ -290,8 +323,8 @@ const AnnotationList = ({
 															e.stopPropagation();
 															startEditing(annotation);
 														}}
-														className="p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-blue rounded"
-														aria-label="Edit annotation"
+														className="p-1 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
+														aria-label={strings.annotationList.editAria}
 													>
 														<svg
 															className="w-4 h-4"
@@ -300,6 +333,7 @@ const AnnotationList = ({
 															viewBox="0 0 24 24"
 															aria-hidden="true"
 														>
+															<title>{strings.annotationList.editAria}</title>
 															<path
 																strokeLinecap="round"
 																strokeLinejoin="round"
@@ -315,7 +349,7 @@ const AnnotationList = ({
 															handleDelete(annotation.id);
 														}}
 														className="p-1 text-gray-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
-														aria-label="Delete annotation"
+														aria-label={strings.annotationList.deleteAria}
 													>
 														<svg
 															className="w-4 h-4"
@@ -323,6 +357,7 @@ const AnnotationList = ({
 															stroke="currentColor"
 															viewBox="0 0 24 24"
 														>
+															<title>{strings.annotationList.deleteAria}</title>
 															<path
 																strokeLinecap="round"
 																strokeLinejoin="round"

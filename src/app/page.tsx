@@ -2,59 +2,68 @@ import Link from "next/link";
 import CreateStoryForm from "@/components/CreateStoryForm";
 import { Header } from "@/components/ui";
 import { getStories } from "@/lib/actions";
+import { getStrings } from "@/lib/i18n/strings";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
 	const stories = await getStories();
+	const strings = getStrings();
 
 	return (
 		<div className="min-h-screen bg-cogapp-cream">
-			<Header
-				title="Storiiies Editor"
-				subtitle="Create annotated stories from IIIF images"
-			/>
+			<Header title={strings.app.title} subtitle={strings.app.subtitle} />
 
 			<main className="max-w-6xl mx-auto px-4 py-8">
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 					{/* Create new story */}
 					<section className="bg-white rounded-lg shadow p-6">
-						<h2 className="text-lg font-semibold mb-4">Create New Story</h2>
+						<h2 className="text-lg font-semibold mb-4">
+							{strings.home.createSectionTitle}
+						</h2>
 						<CreateStoryForm />
 					</section>
 
 					{/* Existing stories */}
 					<section className="bg-white rounded-lg shadow p-6">
 						<div className="flex items-center justify-between mb-4">
-							<h2 className="text-lg font-semibold">All Stories</h2>
+							<h2 className="text-lg font-semibold">
+								{strings.home.allStoriesTitle}
+							</h2>
 							<Link
 								href="/admin"
 								className="text-sm text-cogapp-gray hover:text-cogapp-charcoal"
 							>
-								Admin →
+								{strings.home.adminLinkLabel}
 							</Link>
 						</div>
 
 						{stories.length === 0 ? (
-							<p className="text-gray-500">
-								No stories yet. Create your first one!
-							</p>
+							<p className="text-gray-500">{strings.home.noStoriesMessage}</p>
 						) : (
 							<div className="space-y-3">
 								{stories.map((story) => (
 									<Link
 										key={story.id}
 										href={`/editor/${story.id}`}
-										className="block p-4 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+										className="block p-4 border rounded-lg hover:border-cogapp-lavender hover:bg-cogapp-lavender transition-colors"
 									>
 										<h3 className="font-medium">{story.title}</h3>
 										{story.author && (
-											<p className="text-sm text-gray-500">by {story.author}</p>
+											<p className="text-sm text-gray-500">
+												{strings.home.byAuthor(story.author)}
+											</p>
 										)}
 										<div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-											<span>{story._count.annotations} annotations</span>
 											<span>
-												Updated {new Date(story.updatedAt).toLocaleDateString()}
+												{strings.home.storyAnnotationsLabel(
+													story._count.annotations,
+												)}
+											</span>
+											<span>
+												{strings.home.storyUpdatedLabel(
+													new Date(story.updatedAt).toLocaleDateString(),
+												)}
 											</span>
 										</div>
 									</Link>

@@ -1,0 +1,175 @@
+export type Locale = "en";
+
+const en = {
+	app: {
+		title: "Storiiies Editor",
+		subtitle: "Create annotated stories from IIIF images",
+		adminTitle: "Admin Dashboard",
+		adminSubtitle: "Manage stories and settings",
+	},
+	common: {
+		back: "Back",
+		admin: "Admin",
+		close: "Close",
+		cancel: "Cancel",
+		delete: "Delete",
+		save: "Save",
+		add: "Add",
+		data: "Data",
+		viewer: (name: string) => `${name} Viewer`,
+	},
+	home: {
+		createSectionTitle: "Create New Story",
+		allStoriesTitle: "All Stories",
+		adminLinkLabel: "Admin →",
+		noStoriesMessage: "No stories yet. Create your first one!",
+		storyAnnotationsLabel: (count: number) =>
+			`${count} ${count === 1 ? "annotation" : "annotations"}`,
+		storyUpdatedLabel: (date: string) => `Updated ${date}`,
+		byAuthor: (author: string) => `by ${author}`,
+	},
+	createStoryForm: {
+		infoLabel: "IIIF Image URL",
+		infoPlaceholder: "https://example.com/iiif/image/info.json",
+		infoHint: "Paste either an IIIF image info.json URL or an IIIF manifest.",
+		validate: "Validate",
+		validating: "Checking...",
+		validIIIF: (width: number, height: number) =>
+			`Valid IIIF image: ${width} × ${height} pixels`,
+		errorValidate: "Failed to validate IIIF URL",
+		titleLabel: "Title *",
+		authorLabel: "Author",
+		descriptionLabel: "Description",
+		attributionLabel: "Image Attribution",
+		titlePlaceholder: "Story title",
+		submit: "Create Story",
+		mustValidate: "Please validate the IIIF URL first",
+		titleRequired: "Title is required",
+		manifestDetected: (count: number) =>
+			`Detected IIIF manifest with ${count} ${count === 1 ? "canvas" : "canvases"}.`,
+		manifestInstructions: "Select the image you want to use for this story.",
+		untitledCanvas: "Untitled canvas",
+		canvasSize: (width: number, height: number) =>
+			`${width} × ${height} pixels`,
+		invalidManifest:
+			"Manifest does not contain canvases with IIIF Image services.",
+		invalidInfoResponse: "Invalid IIIF info response: missing width or height.",
+		thumbnailAlt: (label: string) => `Thumbnail preview for ${label}`,
+		fetchFailed: (status: number, statusText: string) =>
+			`Failed to fetch: ${status} ${statusText}`,
+	},
+	editor: {
+		previewButton: "Preview and share",
+		settingsButton: "Settings",
+		annotationsHeading: "Annotations",
+		addButton: "Add",
+		noAnnotations: "No annotations yet. Click “Add” to create one.",
+		sidebarLabel: "Annotations sidebar",
+		crosshairs: {
+			show: "Show crosshairs",
+			hide: "Hide crosshairs",
+		},
+	},
+	annotationList: {
+		noItems:
+			'No annotations yet. Click "Add" and drag on the image to create one.',
+		noText: "No text",
+		dataSummary: "Data",
+		rectLabel: "rect",
+		viewportLabel: "viewport",
+		imagesLabel: "images",
+		editAria: "Edit annotation",
+		deleteAria: "Delete annotation",
+		deleteConfirm: "Delete this annotation?",
+		imageAlt: "Annotation image",
+	},
+	newAnnotationForm: {
+		textLabel: "Annotation text",
+		placeholder: "Enter annotation text...",
+		imagesLabel: "Images (optional)",
+		imagePlaceholder: "https://example.com/image.jpg",
+		addImage: "Add image URL",
+		removeImage: "Remove",
+		save: "Save",
+		saving: "Saving...",
+		cancel: "Cancel",
+		previewUnavailable: "Preview unavailable (too large to display).",
+	},
+	sharePopup: {
+		title: "IIIF Manifest URL",
+		copy: "Copy",
+		copied: "Copied!",
+		instructions:
+			"Use this URL to view your story in any IIIF-compatible viewer.",
+		previewHeading: "Preview in:",
+	},
+	storySettings: {
+		title: "Story Settings",
+		titleLabel: "Title",
+		authorLabel: "Author",
+		descriptionLabel: "Description",
+		attributionLabel: "Attribution",
+		deleteButton: "Delete Story",
+		saveButton: "Save Changes",
+		deleteConfirm:
+			"Are you sure you want to delete this story? This cannot be undone.",
+	},
+	errorBoundary: {
+		title: "Something went wrong",
+		message: "An unexpected error occurred",
+		tryAgain: "Try again",
+	},
+	viewerControls: {
+		zoomIn: "Zoom in",
+		zoomOut: "Zoom out",
+		resetView: "Reset view",
+		showCrosshairs: "Show crosshairs",
+		hideCrosshairs: "Hide crosshairs",
+	},
+	viewers: {
+		storiiies: "Storiiies",
+		clover: "Clover",
+		mirador: "Mirador",
+		annona: "Annona",
+	},
+	preview: {
+		backToEditor: "Back to Editor",
+		errorLoading: (viewer: string, reason: string) =>
+			`Failed to load ${viewer}: ${reason}`,
+		errorGeneric: "Failed to load viewer",
+		loadingViewer: "Loading viewer...",
+		loadingAnnona: "Loading Annona...",
+	},
+	admin: {
+		allStoriesTitle: "All Storiiies",
+		cardDescription: "View and manage all stories in the database",
+		noAuthorPlaceholder: "—",
+		storiesCount: (count: number) => `${count} stories`,
+		noStories: "No stories in the database yet.",
+		tableHeaders: {
+			title: "Title",
+			author: "Author",
+			annotations: "Annotations",
+			created: "Created",
+			id: "ID",
+			actions: "Actions",
+		},
+		actionLabels: {
+			edit: "Edit",
+			storiiies: "Storiiies",
+			clover: "Clover",
+			mirador: "Mirador",
+			annona: "Annona",
+			manifest: "Manifest",
+		},
+	},
+} as const;
+
+const STRINGS: Record<Locale, typeof en> = {
+	en,
+};
+
+export type Strings = typeof en;
+
+export const getStrings = (locale: Locale = "en"): Strings =>
+	STRINGS[locale] ?? en;

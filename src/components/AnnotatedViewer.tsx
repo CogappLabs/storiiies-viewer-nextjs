@@ -9,6 +9,8 @@ import {
 	useState,
 } from "react";
 import type { Annotation } from "@/generated/prisma/client";
+import { VIEWER_CONFIG } from "@/lib/config";
+import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 // Annotorious types
 interface W3CAnnotation {
@@ -126,6 +128,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		},
 		ref,
 	) => {
+		const strings = useStrings();
 		const containerRef = useRef<HTMLDivElement>(null);
 		const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
 		const annoRef = useRef<AnnotoriousInstance | null>(null);
@@ -172,6 +175,21 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		useEffect(() => {
 			if (!containerRef.current) return;
 
+			let isDisposed = false;
+			let crosshairObserver: MutationObserver | null = null;
+			let initialCrosshairTimeout: number | null = null;
+
+			const cleanupCrosshairEffects = () => {
+				if (crosshairObserver) {
+					crosshairObserver.disconnect();
+					crosshairObserver = null;
+				}
+				if (initialCrosshairTimeout) {
+					clearTimeout(initialCrosshairTimeout);
+					initialCrosshairTimeout = null;
+				}
+			};
+
 			const viewer = OpenSeadragon({
 				element: containerRef.current,
 				tileSources: `${imageUrl}/info.json`,
@@ -183,12 +201,15 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 
 			// Wait for OpenSeadragon to be ready before initializing Annotorious
 			viewer.addHandler("open", () => {
-				setIsReady(true);
-				// Dynamically import Annotorious (it doesn't play well with SSR)
-				import("@recogito/annotorious-openseadragon").then((Annotorious) => {
-					import(
+				const initAnnotorious = async () => {
+					const Annotorious = await import(
+						"@recogito/annotorious-openseadragon"
+					);
+					await import(
 						"@recogito/annotorious-openseadragon/dist/annotorious.min.css"
 					);
+
+					if (isDisposed) return;
 
 					const anno = Annotorious.default(viewer, {
 						allowEmpty: false,
@@ -196,11 +217,12 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						fragmentUnit: "pixel",
 					}) as AnnotoriousInstance;
 
-					annoRef.current = anno;
+					if (isDisposed) {
+						anno.destroy();
+						return;
+					}
 
-					// Load existing annotations
-					const w3cAnnotations = annotations.map((a) => toW3C(a, imageUrl));
-					anno.setAnnotations(w3cAnnotations);
+					annoRef.current = anno;
 
 					// Function to add or update crosshairs on an annotation/selection element
 					const updateCrosshairs = (shapeGroup: Element) => {
@@ -214,12 +236,18 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						const width = parseFloat(inner.getAttribute("width") || "0");
 						const height = parseFloat(inner.getAttribute("height") || "0");
 
-						if (width < 5 || height < 5) return;
+						if (
+							width < VIEWER_CONFIG.crosshair.minDimension ||
+							height < VIEWER_CONFIG.crosshair.minDimension
+						) {
+							return;
+						}
 
 						// Center is at x + width/2, y + height/2
 						const centerX = x + width / 2;
 						const centerY = y + height / 2;
-						const size = Math.min(width, height) * 0.15;
+						const size =
+							Math.min(width, height) * VIEWER_CONFIG.crosshair.sizeRatio;
 
 						let group = shapeGroup.querySelector(
 							".crosshair-group",
@@ -238,8 +266,11 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 								"line",
 							);
 							hLine.setAttribute("class", "crosshair-h");
-							hLine.setAttribute("stroke", "#717171");
-							hLine.setAttribute("stroke-width", "2");
+							hLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
+							hLine.setAttribute(
+								"stroke-width",
+								String(VIEWER_CONFIG.crosshair.strokeWidth),
+							);
 							hLine.setAttribute("vector-effect", "non-scaling-stroke");
 
 							const vLine = document.createElementNS(
@@ -247,8 +278,11 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 								"line",
 							);
 							vLine.setAttribute("class", "crosshair-v");
-							vLine.setAttribute("stroke", "#717171");
-							vLine.setAttribute("stroke-width", "2");
+							vLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
+							vLine.setAttribute(
+								"stroke-width",
+								String(VIEWER_CONFIG.crosshair.strokeWidth),
+							);
 							vLine.setAttribute("vector-effect", "non-scaling-stroke");
 
 							group.appendChild(hLine);
@@ -280,11 +314,15 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						const shapes = containerRef.current?.querySelectorAll(
 							".a9s-annotation, .a9s-selection",
 						);
-						shapes?.forEach((shape) => updateCrosshairs(shape));
+						shapes?.forEach((shape) => {
+							updateCrosshairs(shape);
+						});
 					};
 
 					// Watch for new annotations or position/size changes
-					const observer = new MutationObserver((mutations) => {
+					cleanupCrosshairEffects();
+
+					crosshairObserver = new MutationObserver((mutations) => {
 						for (const mutation of mutations) {
 							// Only update on childList changes (new annotations) or x/y/width/height attribute changes
 							if (mutation.type === "childList") {
@@ -313,31 +351,43 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 					const svgOverlay = containerRef.current?.querySelector(
 						".a9s-annotationlayer",
 					);
-					if (svgOverlay) {
-						observer.observe(svgOverlay, {
+					if (svgOverlay && crosshairObserver) {
+						crosshairObserver.observe(svgOverlay, {
 							childList: true,
 							subtree: true,
 							attributes: true,
-							attributeFilter: ["x", "y", "width", "height"],
+							attributeFilter: [...VIEWER_CONFIG.crosshair.observedAttributes],
 						});
 					}
 
 					// Initial update
-					setTimeout(updateAllCrosshairs, 100);
-				});
+					initialCrosshairTimeout = window.setTimeout(
+						updateAllCrosshairs,
+						VIEWER_CONFIG.crosshair.initialUpdateDelayMs,
+					);
+
+					if (!isDisposed) {
+						setIsReady(true);
+					}
+				};
+
+				void initAnnotorious();
 			});
 
 			return () => {
+				isDisposed = true;
+				cleanupCrosshairEffects();
 				annoRef.current?.destroy();
 				viewer.destroy();
 				viewerRef.current = null;
 				annoRef.current = null;
 				setIsReady(false);
 			};
-		}, [imageUrl, imageWidth, imageHeight]);
+		}, [imageUrl]);
 
-		// Handle annotation events
+		// Handle annotation events once Annotorious is ready
 		useEffect(() => {
+			if (!isReady) return;
 			const anno = annoRef.current;
 			if (!anno) return;
 
@@ -373,12 +423,13 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 
 		// Sync annotations from props
 		useEffect(() => {
+			if (!isReady) return;
 			const anno = annoRef.current;
 			if (!anno) return;
 
 			const w3cAnnotations = annotations.map((a) => toW3C(a, imageUrl));
 			anno.setAnnotations(w3cAnnotations);
-		}, [isReady, annotations, imageUrl]);
+		}, [annotations, imageUrl, isReady]);
 
 		// Handle selected annotation
 		useEffect(() => {
@@ -403,7 +454,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		const handleZoomIn = () => {
 			const viewer = viewerRef.current;
 			if (viewer) {
-				viewer.viewport.zoomBy(1.5);
+				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomInFactor);
 				viewer.viewport.applyConstraints();
 			}
 		};
@@ -411,7 +462,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		const handleZoomOut = () => {
 			const viewer = viewerRef.current;
 			if (viewer) {
-				viewer.viewport.zoomBy(0.67);
+				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomOutFactor);
 				viewer.viewport.applyConstraints();
 			}
 		};
@@ -432,8 +483,8 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						<button
 							type="button"
 							onClick={handleZoomIn}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label="Zoom in"
+							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+							aria-label={strings.viewerControls.zoomIn}
 						>
 							<svg
 								className="w-5 h-5"
@@ -453,8 +504,8 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						<button
 							type="button"
 							onClick={handleZoomOut}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label="Zoom out"
+							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+							aria-label={strings.viewerControls.zoomOut}
 						>
 							<svg
 								className="w-5 h-5"
@@ -474,8 +525,8 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						<button
 							type="button"
 							onClick={handleHome}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label="Reset view"
+							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+							aria-label={strings.viewerControls.resetView}
 						>
 							<svg
 								className="w-5 h-5"
@@ -495,13 +546,15 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						<button
 							type="button"
 							onClick={onToggleCrosshairs}
-							className={`p-2 rounded shadow border focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2 ${
+							className={`p-2 rounded shadow border focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 ${
 								showCrosshairs
 									? "bg-cogapp-charcoal text-cogapp-cream border-cogapp-charcoal hover:bg-cogapp-charcoal/90"
 									: "bg-white hover:bg-gray-100"
 							}`}
 							aria-label={
-								showCrosshairs ? "Hide crosshairs" : "Show crosshairs"
+								showCrosshairs
+									? strings.viewerControls.hideCrosshairs
+									: strings.viewerControls.showCrosshairs
 							}
 							aria-pressed={showCrosshairs}
 						>

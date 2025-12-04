@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { getStrings } from "@/lib/i18n/strings";
 
 interface Props {
 	children: ReactNode;
@@ -31,6 +32,7 @@ class ErrorBoundary extends Component<Props, State> {
 	};
 
 	render(): ReactNode {
+		const strings = getStrings();
 		if (this.state.hasError) {
 			if (this.props.fallback) {
 				return this.props.fallback;
@@ -40,17 +42,17 @@ class ErrorBoundary extends Component<Props, State> {
 				<div className="min-h-[200px] flex items-center justify-center p-8">
 					<div className="text-center max-w-md">
 						<h2 className="text-lg font-medium text-cogapp-charcoal mb-2">
-							Something went wrong
+							{strings.errorBoundary.title}
 						</h2>
 						<p className="text-sm text-cogapp-gray mb-4">
-							{this.state.error?.message || "An unexpected error occurred"}
+							{this.state.error?.message || strings.errorBoundary.message}
 						</p>
 						<button
 							type="button"
 							onClick={this.handleReset}
-							className="px-4 py-2 bg-cogapp-charcoal text-cogapp-cream rounded hover:bg-cogapp-charcoal/90 focus:outline-none focus:ring-2 focus:ring-cogapp-blue focus:ring-offset-2"
+							className="px-4 py-2 bg-cogapp-charcoal text-cogapp-cream rounded hover:bg-cogapp-charcoal/90 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2"
 						>
-							Try again
+							{strings.errorBoundary.tryAgain}
 						</button>
 					</div>
 				</div>

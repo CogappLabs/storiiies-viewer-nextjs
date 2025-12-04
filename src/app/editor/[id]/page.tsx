@@ -5,11 +5,7 @@ import { getStory } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
-const EditorPage = async ({
-	params,
-}: {
-	params: Promise<{ id: string }>;
-}) => {
+const EditorPage = async ({ params }: { params: Promise<{ id: string }> }) => {
 	const { id } = await params;
 	const story = await getStory(id);
 

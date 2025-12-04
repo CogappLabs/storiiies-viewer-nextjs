@@ -52,7 +52,7 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
 - Use Cogapp brand colors defined in `globals.css`:
   - `cogapp-charcoal` (#282828) - headers, primary buttons
   - `cogapp-cream` (#ebebe1) - page backgrounds
-  - `cogapp-blue` (#227bff) - focus rings, active states
+  - `cogapp-lavender` (#e8daff) - focus rings, active states
   - `cogapp-light-blue` - selected/active states background
 - Button variants: `primary`, `secondary`, `ghost`, `danger`
 - Headers use the `<Header>` component for consistency

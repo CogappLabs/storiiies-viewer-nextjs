@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Story } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+
+type StoryWithCount = Story & { _count: { annotations: number } };
 
 // Helper to safely get string from FormData
 const getString = (formData: FormData, key: string): string => {
@@ -51,18 +54,47 @@ const validateCoordinates = (coords: {
 }): void => {
 	const { x, y, width, height } = coords;
 
-	if (x !== undefined && (typeof x !== "number" || !Number.isFinite(x) || x < 0)) {
+	if (
+		x !== undefined &&
+		(typeof x !== "number" || !Number.isFinite(x) || x < 0)
+	) {
 		throw new Error("x coordinate must be a non-negative number");
 	}
-	if (y !== undefined && (typeof y !== "number" || !Number.isFinite(y) || y < 0)) {
+	if (
+		y !== undefined &&
+		(typeof y !== "number" || !Number.isFinite(y) || y < 0)
+	) {
 		throw new Error("y coordinate must be a non-negative number");
 	}
-	if (width !== undefined && (typeof width !== "number" || !Number.isFinite(width) || width <= 0)) {
+	if (
+		width !== undefined &&
+		(typeof width !== "number" || !Number.isFinite(width) || width <= 0)
+	) {
 		throw new Error("width must be a positive number");
 	}
-	if (height !== undefined && (typeof height !== "number" || !Number.isFinite(height) || height <= 0)) {
+	if (
+		height !== undefined &&
+		(typeof height !== "number" || !Number.isFinite(height) || height <= 0)
+	) {
 		throw new Error("height must be a positive number");
 	}
+};
+
+const NEXT_REDIRECT_MESSAGE = "NEXT_REDIRECT";
+
+const handleActionError = (scope: string, error: unknown): never => {
+	if (error instanceof Error && error.message === NEXT_REDIRECT_MESSAGE) {
+		throw error;
+	}
+
+	const fallback = `Failed to ${scope}`;
+	console.error(`${fallback}:`, error);
+
+	if (error instanceof Error) {
+		throw error;
+	}
+
+	throw new Error(fallback);
 };
 
 // Story actions
@@ -99,14 +131,7 @@ export const createStory = async (formData: FormData) => {
 
 		redirect(`/editor/${story.id}`);
 	} catch (error) {
-		// Re-throw redirect errors (Next.js uses these internally)
-		if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-			throw error;
-		}
-		console.error("Failed to create story:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to create story",
-		);
+		handleActionError("create story", error);
 	}
 };
 
@@ -137,10 +162,7 @@ export const updateStory = async (id: string, formData: FormData) => {
 
 		revalidatePath(`/editor/${id}`);
 	} catch (error) {
-		console.error("Failed to update story:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to update story",
-		);
+		handleActionError("update story", error);
 	}
 };
 
@@ -154,17 +176,11 @@ export const deleteStory = async (id: string) => {
 		revalidatePath("/");
 		redirect("/");
 	} catch (error) {
-		if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-			throw error;
-		}
-		console.error("Failed to delete story:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to delete story",
-		);
+		handleActionError("delete story", error);
 	}
 };
 
-export const getStories = async () => {
+export const getStories = async (): Promise<StoryWithCount[]> => {
 	try {
 		return await prisma.story.findMany({
 			orderBy: { updatedAt: "desc" },
@@ -173,8 +189,8 @@ export const getStories = async () => {
 			},
 		});
 	} catch (error) {
-		console.error("Failed to fetch stories:", error);
-		throw new Error("Failed to fetch stories");
+		handleActionError("fetch stories", error);
+		throw error;
 	}
 };
 
@@ -196,10 +212,8 @@ export const getStory = async (id: string) => {
 			},
 		});
 	} catch (error) {
-		console.error("Failed to fetch story:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to fetch story",
-		);
+		handleActionError("fetch story", error);
+		throw error;
 	}
 };
 
@@ -233,8 +247,12 @@ export const createAnnotation = async (
 		});
 
 		// Also validate viewport coordinates if provided
-		if (data.viewportX !== undefined || data.viewportY !== undefined ||
-			data.viewportWidth !== undefined || data.viewportHeight !== undefined) {
+		if (
+			data.viewportX !== undefined ||
+			data.viewportY !== undefined ||
+			data.viewportWidth !== undefined ||
+			data.viewportHeight !== undefined
+		) {
 			validateCoordinates({
 				x: data.viewportX,
 				y: data.viewportY,
@@ -284,10 +302,7 @@ export const createAnnotation = async (
 		revalidatePath(`/editor/${storyId}`);
 		return annotation;
 	} catch (error) {
-		console.error("Failed to create annotation:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to create annotation",
-		);
+		handleActionError("create annotation", error);
 	}
 };
 
@@ -323,10 +338,7 @@ export const updateAnnotation = async (
 		revalidatePath(`/editor/${storyId}`);
 		return annotation;
 	} catch (error) {
-		console.error("Failed to update annotation:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to update annotation",
-		);
+		handleActionError("update annotation", error);
 	}
 };
 
@@ -339,10 +351,7 @@ export const deleteAnnotation = async (id: string, storyId: string) => {
 		await prisma.annotation.delete({ where: { id } });
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
-		console.error("Failed to delete annotation:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to delete annotation",
-		);
+		handleActionError("delete annotation", error);
 	}
 };
 
@@ -370,10 +379,7 @@ export const reorderAnnotations = async (
 
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
-		console.error("Failed to reorder annotations:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to reorder annotations",
-		);
+		handleActionError("reorder annotations", error);
 	}
 };
 
@@ -407,10 +413,7 @@ export const addAnnotationImage = async (
 
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
-		console.error("Failed to add annotation image:", error);
-		throw new Error(
-			error instanceof Error ? error.message : "Failed to add annotation image",
-		);
+		handleActionError("add annotation image", error);
 	}
 };
 
@@ -426,12 +429,7 @@ export const removeAnnotationImage = async (
 		await prisma.annotationImage.delete({ where: { id: imageId } });
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
-		console.error("Failed to remove annotation image:", error);
-		throw new Error(
-			error instanceof Error
-				? error.message
-				: "Failed to remove annotation image",
-		);
+		handleActionError("remove annotation image", error);
 	}
 };
 
@@ -464,11 +462,6 @@ export const updateAnnotationImages = async (
 
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
-		console.error("Failed to update annotation images:", error);
-		throw new Error(
-			error instanceof Error
-				? error.message
-				: "Failed to update annotation images",
-		);
+		handleActionError("update annotation images", error);
 	}
 };
