@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Storiiies Editor
+
+A local-first editor for creating IIIF annotation stories. Create annotated narratives from IIIF images and preview them in multiple IIIF viewers.
+
+## Features
+
+- Create stories from any IIIF image URL
+- Draw annotation regions on images with OpenSeadragon
+- Drag-and-drop reordering of annotations
+- Add images to annotations
+- Preview stories in multiple IIIF viewers:
+  - Storiiies Viewer
+  - Clover
+  - Mirador
+  - Annona
+- Export as IIIF Presentation API 3.0 manifests
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Database**: SQLite via Prisma
+- **Styling**: Tailwind CSS 4
+- **Image Viewer**: OpenSeadragon with Annotorious
+- **Drag & Drop**: @hello-pangea/dnd
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 20+
+- npm
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd storiiies-editor-local
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. Initialize the database:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── admin/              # Admin dashboard
+│   ├── api/                # API routes (manifest generation)
+│   ├── editor/             # Story editor
+│   └── preview/            # Viewer previews (storiiies, clover, mirador, annona)
+├── components/             # React components
+│   ├── ui/                 # Reusable UI components (Button, Header, etc.)
+│   ├── Editor.tsx          # Main editor component
+│   ├── AnnotatedViewer.tsx # OpenSeadragon viewer with annotations
+│   └── AnnotationList.tsx  # Draggable annotation list
+├── lib/                    # Utilities and server actions
+└── generated/              # Prisma generated client
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Create a Story**: Enter a IIIF image URL (info.json) on the home page
+2. **Add Annotations**: Click "Add" and draw rectangles on the image
+3. **Edit Content**: Add text and optional images to each annotation
+4. **Reorder**: Drag annotations to change their order
+5. **Preview**: Use the "Share" button to preview in different IIIF viewers
+6. **Export**: Copy the manifest URL to use in any IIIF-compatible viewer
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

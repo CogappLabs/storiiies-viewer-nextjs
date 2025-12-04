@@ -2,25 +2,53 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #282828;
+  /* Cogapp brand colors */
+  --cogapp-charcoal: #282828;
+  --cogapp-cream: #ebebe1;
+  --cogapp-blue: #227bff;
+  --cogapp-gray: #717171;
+  /* Pastel accents */
+  --cogapp-pink: #ffdaea;
+  --cogapp-light-blue: #dae9ff;
+  --cogapp-lavender: #e8daff;
+  --cogapp-mint: #edffda;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-cogapp-charcoal: #282828;
+  --color-cogapp-cream: #ebebe1;
+  --color-cogapp-blue: #227bff;
+  --color-cogapp-gray: #717171;
+  --color-cogapp-pink: #ffdaea;
+  --color-cogapp-light-blue: #dae9ff;
+  --color-cogapp-lavender: #e8daff;
+  --color-cogapp-mint: #edffda;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Annotorious crosshair styles */
+.crosshair-group line {
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* Crosshairs while drawing (selection) */
+.a9s-selection .crosshair-group line {
+  stroke: #ef4444 !important;
+  stroke-dasharray: 4 2;
+}
+
+/* Selected annotation crosshairs */
+.a9s-annotation.selected .crosshair-group line {
+  stroke: #22c55e !important;
 }

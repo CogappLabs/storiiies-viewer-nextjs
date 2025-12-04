@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Story {
+  id          String   @id @default(uuid())
+  title       String
+  author      String?
+  description String?
+  attribution String?
+  imageUrl    String
+  imageWidth  Int
+  imageHeight Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  annotations Annotation[]
+}
+
+model Annotation {
+  id        String   @id @default(uuid())
+  storyId   String
+  text      String
+  // Rectangle drawn by user (in image pixel coordinates)
+  x         Float
+  y         Float
+  width     Float
+  height    Float
+  // Viewport bounds when annotation was created (in image pixel coordinates)
+  viewportX      Float?
+  viewportY      Float?
+  viewportWidth  Float?
+  viewportHeight Float?
+  ordinal   Int
+  createdAt DateTime @default(now())
+
+  story  Story             @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  images AnnotationImage[]
+
+  @@index([storyId])
+  @@index([storyId, ordinal])
+}
+
+model AnnotationImage {
+  id           String   @id @default(uuid())
+  annotationId String
+  imageUrl     String
+  ordinal      Int
+  createdAt    DateTime @default(now())
+
+  annotation Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+
+  @@index([annotationId])
+  @@index([annotationId, ordinal])
+}
