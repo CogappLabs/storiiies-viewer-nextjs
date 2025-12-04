@@ -54,6 +54,7 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
   - `cogapp-cream` (#ebebe1) - page backgrounds
   - `cogapp-lavender` (#e8daff) - focus rings, active states
   - `cogapp-light-blue` - selected/active states background
+- Avoid introducing new blue accents; prefer charcoal/lavender for interactive states.
 - Button variants: `primary`, `secondary`, `ghost`, `danger`
 - Headers use the `<Header>` component for consistency
 

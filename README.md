@@ -85,7 +85,7 @@ src/
 
 ## Usage
 
-1. **Create a Story**: Enter a IIIF image URL on the home page
+1. **Create a Story**: Paste a IIIF image `info.json` URL or a full IIIF manifest. If it’s a manifest, pick the desired canvas from the list of previews.
 2. **Add Annotations**: Navigate to your desired view, then click "Add" to create an annotation at the current viewport
 3. **Adjust Region**: Resize or reposition the annotation rectangle as needed
 4. **Edit Content**: Add text and optional images to each annotation
