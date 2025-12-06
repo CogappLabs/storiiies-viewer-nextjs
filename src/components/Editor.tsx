@@ -17,6 +17,7 @@ import NewAnnotationForm from "./NewAnnotationForm";
 import SharePopup from "./SharePopup";
 import StorySettingsModal from "./StorySettingsModal";
 import { Button, Header } from "./ui";
+import { updateAnnotation } from "@/lib/actions";
 
 // Dynamic import for the viewer (uses OpenSeadragon which needs window)
 const AnnotatedViewer = dynamic(() => import("./AnnotatedViewer"), {
@@ -45,6 +46,7 @@ const Editor = ({ story }: Props) => {
 		rect: { x: number; y: number; width: number; height: number };
 		viewport: { x: number; y: number; width: number; height: number };
 	} | null>(null);
+	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 	const strings = useStrings();
 
 	useEffect(() => {
@@ -58,6 +60,16 @@ const Editor = ({ story }: Props) => {
 		if (bounds) {
 			setPendingData(bounds);
 		}
+	};
+
+	const handleAnnotationUpdate = async (
+		id: string,
+		coords: { x: number; y: number; width: number; height: number },
+	) => {
+		setSaveStatus("saving");
+		await updateAnnotation(id, story.id, coords);
+		setSaveStatus("saved");
+		setTimeout(() => setSaveStatus("idle"), 1500);
 	};
 
 	return (
@@ -104,7 +116,14 @@ const Editor = ({ story }: Props) => {
 					aria-label={strings.editor.sidebarLabel}
 				>
 					<div className="p-4 border-b flex items-center justify-between">
-						<h2 className="font-medium">{strings.editor.annotationsHeading}</h2>
+						<div className="flex items-center gap-2">
+							<h2 className="font-medium">{strings.editor.annotationsHeading}</h2>
+							{saveStatus !== "idle" && (
+								<span className="text-xs text-gray-500">
+									{saveStatus === "saving" ? "Saving..." : "Saved"}
+								</span>
+							)}
+						</div>
 						<Button onClick={handleAddAnnotation}>
 							{strings.editor.addButton}
 						</Button>
@@ -137,6 +156,7 @@ const Editor = ({ story }: Props) => {
 						imageWidth={story.imageWidth}
 						imageHeight={story.imageHeight}
 						annotations={story.annotations}
+						onAnnotationUpdate={handleAnnotationUpdate}
 						onAnnotationSelect={setSelectedAnnotationId}
 						selectedAnnotationId={selectedAnnotationId}
 						showCrosshairs={showCrosshairs}

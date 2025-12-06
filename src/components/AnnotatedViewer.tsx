@@ -398,6 +398,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 				}
 			};
 
+
 			const handleDelete = (w3cAnnotation: W3CAnnotation) => {
 				if (onAnnotationDelete) {
 					onAnnotationDelete(w3cAnnotation.id);
