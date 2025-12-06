@@ -10,7 +10,8 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
 
 ### Key Technologies
 - **Next.js 16** with App Router and Turbopack
-- **Prisma** with SQLite for data persistence
+- **Prisma** with PostgreSQL (Neon) for data persistence
+- **Vercel** for hosting
 - **Tailwind CSS 4** for styling
 - **OpenSeadragon** for IIIF tiled image viewing
 - **Annotorious** for annotation editing (resize/reposition)
@@ -27,7 +28,7 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
 1. Stories are created via `createStory` server action
 2. Annotations are created at the current viewport position via `getViewportBounds()`
 3. Annotations can be resized/repositioned using Annotorious
-4. Data is stored in SQLite via Prisma
+4. Data is stored in PostgreSQL (Neon) via Prisma with `@prisma/adapter-pg`
 5. IIIF manifests are generated on-demand via `/api/manifest/[id]`
 
 ### Image Loading
@@ -65,8 +66,11 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
 
 ### Database
 - Schema in `prisma/schema.prisma`
+- Uses `@prisma/adapter-pg` for serverless PostgreSQL (no native binaries)
+- Connection configured in `src/lib/prisma.ts`
 - Run `npx prisma generate` after schema changes
-- Run `npx prisma db push` to sync database
+- Run `npx prisma migrate dev` for local development
+- Migrations auto-run on Vercel deploy via build script
 
 ## Common Tasks
 
@@ -82,9 +86,9 @@ Storiiies Editor is a Next.js application for creating IIIF annotation stories. 
 
 ### Modifying the Database
 1. Update `prisma/schema.prisma`
-2. Run `npx prisma generate`
-3. Run `npx prisma db push`
-4. Update affected server actions
+2. Run `npx prisma migrate dev --name <migration_name>`
+3. Update affected server actions
+4. Migrations will auto-deploy on Vercel push
 
 ### Testing Viewers
 Preview pages are available at:
@@ -102,6 +106,23 @@ npx biome check --write # Auto-fix issues
 npx tsc --noEmit        # Type check
 npm run dev             # Development server
 ```
+
+## Environment Variables
+
+Required for database (auto-populated by Vercel + Neon integration):
+- `POSTGRES_PRISMA_URL` - Pooled connection string
+- `POSTGRES_URL_NON_POOLING` - Direct connection for migrations
+
+Optional:
+- `BASIC_AUTH_USER` - Username for basic auth protection
+- `BASIC_AUTH_PASSWORD` - Password for basic auth protection
+
+## Deployment
+
+- Hosted on **Vercel** with **Neon** PostgreSQL
+- Database provisioned via Vercel Marketplace integration
+- Basic auth configured via `src/proxy.ts` (Next.js 16 proxy convention)
+- Build command: `prisma generate && prisma migrate deploy && next build`
 
 ## Notes
 

@@ -20,7 +20,8 @@ A local-first editor for creating IIIF annotation stories. Create annotated narr
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **Database**: SQLite via Prisma
+- **Database**: PostgreSQL via Prisma (Neon recommended for serverless)
+- **Hosting**: Vercel
 - **Styling**: Tailwind CSS 4
 - **Image Viewer**: OpenSeadragon with IIIF tiled rendering
 - **Annotations**: Annotorious for OpenSeadragon
@@ -49,13 +50,17 @@ A local-first editor for creating IIIF annotation stories. Create annotated narr
 
 3. Set up environment variables:
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
+
+   For local development, you can either:
+   - Use a Neon database (recommended) - add your connection strings to `.env.local`
+   - Pull env vars from Vercel: `vercel env pull .env.local`
 
 4. Initialize the database:
    ```bash
    npx prisma generate
-   npx prisma db push
+   npx prisma migrate dev
    ```
 
 5. Start the development server:
@@ -100,6 +105,40 @@ src/
 - `npm run start` - Start production server
 - `npx biome check` - Run linting and formatting checks
 - `npx biome check --write` - Auto-fix linting and formatting issues
+
+## Deployment (Vercel + Neon)
+
+### 1. Deploy to Vercel
+
+1. Push your repository to GitHub
+2. Import the project on [Vercel](https://vercel.com)
+3. Vercel will auto-detect Next.js settings
+
+### 2. Add Neon Database
+
+1. In your Vercel project, go to **Storage** tab
+2. Click **Connect Store** → **Browse Marketplace** → **Neon**
+3. Create a new Neon database (or link existing)
+4. Environment variables `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` will be auto-populated
+
+### 3. Run Migrations
+
+Migrations run automatically on build via the `prisma migrate deploy` command in the build script.
+
+For manual migration:
+```bash
+vercel env pull .env.local
+npx prisma migrate deploy
+```
+
+### 4. Basic Auth (Optional)
+
+To protect the app with basic authentication, set these environment variables in Vercel:
+
+- `BASIC_AUTH_USER` - Username
+- `BASIC_AUTH_PASSWORD` - Password
+
+If not set, authentication is disabled.
 
 ## Todo
 
