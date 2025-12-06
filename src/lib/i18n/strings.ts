@@ -29,6 +29,8 @@ const en = {
 		byAuthor: (author: string) => `by ${author}`,
 	},
 	createStoryForm: {
+		sourceTabUrl: "From URL",
+		sourceTabUpload: "Upload Image",
 		infoLabel: "IIIF Image URL",
 		infoPlaceholder: "https://example.com/iiif/image/info.json",
 		infoHint: "Paste either an IIIF image info.json URL or an IIIF manifest.",
@@ -57,6 +59,12 @@ const en = {
 		thumbnailAlt: (label: string) => `Thumbnail preview for ${label}`,
 		fetchFailed: (status: number, statusText: string) =>
 			`Failed to fetch: ${status} ${statusText}`,
+		uploadLabel: "Select an image",
+		uploadHint: "Supported formats: JPEG, PNG, WebP, TIFF. Max 50MB.",
+		uploading: "Uploading and processing...",
+		uploadSuccess: "Image uploaded successfully",
+		uploadError: "Failed to upload image",
+		dragDropHint: "or drag and drop",
 	},
 	editor: {
 		previewButton: "Preview and share",
@@ -142,10 +150,14 @@ const en = {
 	},
 	admin: {
 		allStoriesTitle: "All Storiiies",
+		allImagesTitle: "Uploaded Images",
 		cardDescription: "View and manage all stories in the database",
+		imagesCardDescription: "View and manage uploaded IIIF images",
 		noAuthorPlaceholder: "—",
 		storiesCount: (count: number) => `${count} stories`,
+		imagesCount: (count: number) => `${count} images`,
 		noStories: "No stories in the database yet.",
+		noImages: "No uploaded images yet.",
 		tableHeaders: {
 			title: "Title",
 			author: "Author",
@@ -154,14 +166,25 @@ const en = {
 			id: "ID",
 			actions: "Actions",
 		},
+		imageTableHeaders: {
+			filename: "Filename",
+			dimensions: "Dimensions",
+			usedBy: "Used By",
+			created: "Created",
+			actions: "Actions",
+		},
 		actionLabels: {
 			edit: "Edit",
+			delete: "Delete",
 			storiiies: "Storiiies",
 			clover: "Clover",
 			mirador: "Mirador",
 			annona: "Annona",
 			manifest: "Manifest",
+			viewInfoJson: "info.json",
 		},
+		notUsed: "Not used",
+		deleteImageConfirm: "Delete this image? This cannot be undone.",
 	},
 } as const;
 

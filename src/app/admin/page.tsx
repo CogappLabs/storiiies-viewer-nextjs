@@ -23,6 +23,17 @@ const AdminDashboard = () => {
 							{strings.admin.cardDescription}
 						</p>
 					</Link>
+					<Link
+						href="/admin/images"
+						className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+					>
+						<h2 className="text-lg font-semibold">
+							{strings.admin.allImagesTitle}
+						</h2>
+						<p className="text-gray-600 mt-1">
+							{strings.admin.imagesCardDescription}
+						</p>
+					</Link>
 				</div>
 			</main>
 		</div>

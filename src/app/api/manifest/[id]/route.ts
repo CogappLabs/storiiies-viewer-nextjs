@@ -13,6 +13,7 @@ export async function GET(
 	const story = await prisma.story.findUnique({
 		where: { id },
 		include: {
+			imageSource: true,
 			annotations: {
 				orderBy: { ordinal: "asc" },
 				include: {
@@ -25,6 +26,12 @@ export async function GET(
 	if (!story) {
 		return NextResponse.json({ error: "Story not found" }, { status: 404 });
 	}
+
+	// Get image service URL (strip /info.json from the end)
+	const imageServiceUrl = story.imageSource.infoJsonUrl.replace(
+		/\/info\.json$/,
+		"",
+	);
 
 	// Build IIIF Presentation API v3 manifest
 	const manifest = {
@@ -46,8 +53,8 @@ export async function GET(
 			{
 				id: `${baseUrl}/api/manifest/${story.id}/canvas/1`,
 				type: "Canvas",
-				width: story.imageWidth,
-				height: story.imageHeight,
+				width: story.imageSource.width,
+				height: story.imageSource.height,
 				items: [
 					{
 						id: `${baseUrl}/api/manifest/${story.id}/canvas/1/page`,
@@ -58,14 +65,14 @@ export async function GET(
 								type: "Annotation",
 								motivation: "painting",
 								body: {
-									id: `${story.imageUrl}/full/max/0/default.jpg`,
+									id: `${imageServiceUrl}/full/max/0/default.jpg`,
 									type: "Image",
 									format: "image/jpeg",
-									width: story.imageWidth,
-									height: story.imageHeight,
+									width: story.imageSource.width,
+									height: story.imageSource.height,
 									service: [
 										{
-											id: story.imageUrl,
+											id: imageServiceUrl,
 											type: "ImageService3",
 											profile: "level1",
 										},

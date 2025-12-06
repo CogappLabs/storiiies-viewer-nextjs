@@ -13,19 +13,38 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
-model Story {
-  id          String   @id @default(uuid())
-  title       String
-  author      String?
-  description String?
-  attribution String?
-  imageUrl    String
-  imageWidth  Int
-  imageHeight Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum ImageSourceType {
+  url       // User directly entered an info.json URL
+  manifest  // User selected from a manifest
+  upload    // User uploaded a file
+}
 
-  annotations Annotation[]
+model ImageSource {
+  id           String          @id @default(uuid())
+  infoJsonUrl  String          @unique
+  width        Int
+  height       Int
+  sourceType   ImageSourceType
+  originalName String?         // For uploads: the original filename
+  manifestUrl  String?         // For manifest sources: the manifest URL
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  story        Story?
+}
+
+model Story {
+  id            String   @id @default(uuid())
+  title         String
+  author        String?
+  description   String?
+  attribution   String?
+  imageSourceId String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  imageSource   ImageSource  @relation(fields: [imageSourceId], references: [id])
+  annotations   Annotation[]
 }
 
 model Annotation {

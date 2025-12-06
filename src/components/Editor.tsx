@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type {
 	Annotation,
 	AnnotationImage,
+	ImageSource,
 	Story,
 } from "@/generated/prisma/client";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
@@ -12,12 +13,12 @@ import type { AnnotatedViewerHandle } from "./AnnotatedViewer";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
 
+import { updateAnnotation } from "@/lib/actions";
 import AnnotationList from "./AnnotationList";
 import NewAnnotationForm from "./NewAnnotationForm";
 import SharePopup from "./SharePopup";
 import StorySettingsModal from "./StorySettingsModal";
 import { Button, Header } from "./ui";
-import { updateAnnotation } from "@/lib/actions";
 
 // Dynamic import for the viewer (uses OpenSeadragon which needs window)
 const AnnotatedViewer = dynamic(() => import("./AnnotatedViewer"), {
@@ -30,7 +31,10 @@ const AnnotatedViewer = dynamic(() => import("./AnnotatedViewer"), {
 });
 
 interface Props {
-	story: Story & { annotations: AnnotationWithImages[] };
+	story: Story & {
+		imageSource: ImageSource;
+		annotations: AnnotationWithImages[];
+	};
 }
 
 const Editor = ({ story }: Props) => {
@@ -46,7 +50,9 @@ const Editor = ({ story }: Props) => {
 		rect: { x: number; y: number; width: number; height: number };
 		viewport: { x: number; y: number; width: number; height: number };
 	} | null>(null);
-	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+	const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">(
+		"idle",
+	);
 	const strings = useStrings();
 
 	useEffect(() => {
@@ -117,7 +123,9 @@ const Editor = ({ story }: Props) => {
 				>
 					<div className="p-4 border-b flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<h2 className="font-medium">{strings.editor.annotationsHeading}</h2>
+							<h2 className="font-medium">
+								{strings.editor.annotationsHeading}
+							</h2>
 							{saveStatus !== "idle" && (
 								<span className="text-xs text-gray-500">
 									{saveStatus === "saving" ? "Saving..." : "Saved"}
@@ -152,9 +160,12 @@ const Editor = ({ story }: Props) => {
 				<div className="flex-1 relative">
 					<AnnotatedViewer
 						ref={viewerRef}
-						imageUrl={story.imageUrl}
-						imageWidth={story.imageWidth}
-						imageHeight={story.imageHeight}
+						imageUrl={story.imageSource.infoJsonUrl.replace(
+							/\/info\.json$/,
+							"",
+						)}
+						imageWidth={story.imageSource.width}
+						imageHeight={story.imageSource.height}
 						annotations={story.annotations}
 						onAnnotationUpdate={handleAnnotationUpdate}
 						onAnnotationSelect={setSelectedAnnotationId}

@@ -1,9 +1,12 @@
 import Link from "next/link";
+import DeleteStoryButton from "@/components/DeleteStoryButton";
 import { Header } from "@/components/ui";
 import { getStories } from "@/lib/actions";
 import { getStrings } from "@/lib/i18n/strings";
 
 export const dynamic = "force-dynamic";
+
+const isDev = process.env.NODE_ENV === "development";
 
 export default async function AdminStoriiies() {
 	const stories = await getStories();
@@ -74,6 +77,7 @@ export default async function AdminStoriiies() {
 												>
 													{strings.admin.actionLabels.edit}
 												</Link>
+												{isDev && <DeleteStoryButton storyId={story.id} />}
 												<Link
 													href={`/preview/storiiies/${story.id}`}
 													className="text-sm text-green-600 hover:underline"

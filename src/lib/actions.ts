@@ -2,10 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { Story } from "@/generated/prisma/client";
+import type {
+	ImageSource,
+	ImageSourceType,
+	Story,
+} from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
-type StoryWithCount = Story & { _count: { annotations: number } };
+type StoryWithImageSource = Story & { imageSource: ImageSource };
+type StoryWithCount = StoryWithImageSource & {
+	_count: { annotations: number };
+};
 
 // Helper to safely get string from FormData
 const getString = (formData: FormData, key: string): string => {
@@ -108,14 +115,38 @@ export const createStory = async (formData: FormData) => {
 		const author = getOptionalString(formData, "author");
 		const description = getOptionalString(formData, "description");
 		const attribution = getOptionalString(formData, "attribution");
-		const imageUrl = getString(formData, "imageUrl");
+		const infoJsonUrl = getString(formData, "imageUrl");
 
-		if (!isValidUrl(imageUrl)) {
+		if (!isValidUrl(infoJsonUrl)) {
 			throw new Error("Invalid image URL");
 		}
 
-		const imageWidth = getPositiveInt(formData, "imageWidth");
-		const imageHeight = getPositiveInt(formData, "imageHeight");
+		const width = getPositiveInt(formData, "imageWidth");
+		const height = getPositiveInt(formData, "imageHeight");
+
+		// Get source type from form (defaults to 'url')
+		const sourceTypeValue = getOptionalString(formData, "sourceType");
+		const sourceType: ImageSourceType =
+			sourceTypeValue === "manifest"
+				? "manifest"
+				: sourceTypeValue === "upload"
+					? "upload"
+					: "url";
+
+		const manifestUrl = getOptionalString(formData, "manifestUrl");
+
+		// Create or find the ImageSource
+		const imageSource = await prisma.imageSource.upsert({
+			where: { infoJsonUrl },
+			update: {},
+			create: {
+				infoJsonUrl,
+				width,
+				height,
+				sourceType,
+				manifestUrl,
+			},
+		});
 
 		const story = await prisma.story.create({
 			data: {
@@ -123,9 +154,7 @@ export const createStory = async (formData: FormData) => {
 				author: author?.trim() || null,
 				description: description?.trim() || null,
 				attribution: attribution?.trim() || null,
-				imageUrl,
-				imageWidth,
-				imageHeight,
+				imageSourceId: imageSource.id,
 			},
 		});
 
@@ -185,6 +214,7 @@ export const getStories = async (): Promise<StoryWithCount[]> => {
 		return await prisma.story.findMany({
 			orderBy: { updatedAt: "desc" },
 			include: {
+				imageSource: true,
 				_count: { select: { annotations: true } },
 			},
 		});
@@ -203,6 +233,7 @@ export const getStory = async (id: string) => {
 		return await prisma.story.findUnique({
 			where: { id },
 			include: {
+				imageSource: true,
 				annotations: {
 					orderBy: { ordinal: "asc" },
 					include: {
@@ -463,5 +494,47 @@ export const updateAnnotationImages = async (
 		revalidatePath(`/editor/${storyId}`);
 	} catch (error) {
 		handleActionError("update annotation images", error);
+	}
+};
+
+// ImageSource actions
+export type ImageSourceWithStory = ImageSource & {
+	story: { id: string; title: string } | null;
+};
+
+export const getImageSources = async (): Promise<ImageSourceWithStory[]> => {
+	try {
+		const imageSources = await prisma.imageSource.findMany({
+			orderBy: { createdAt: "desc" },
+			include: {
+				story: {
+					select: { id: true, title: true },
+				},
+			},
+		});
+
+		return imageSources;
+	} catch (error) {
+		handleActionError("fetch image sources", error);
+		throw error;
+	}
+};
+
+export const getUploadedImages = async (): Promise<ImageSourceWithStory[]> => {
+	try {
+		const imageSources = await prisma.imageSource.findMany({
+			where: { sourceType: "upload" },
+			orderBy: { createdAt: "desc" },
+			include: {
+				story: {
+					select: { id: true, title: true },
+				},
+			},
+		});
+
+		return imageSources;
+	} catch (error) {
+		handleActionError("fetch uploaded images", error);
+		throw error;
 	}
 };
