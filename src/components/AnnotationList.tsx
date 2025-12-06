@@ -15,6 +15,7 @@ import {
 	updateAnnotation,
 	updateAnnotationImages,
 } from "@/lib/actions";
+import { createImageField, type ImageField } from "@/lib/form-utils";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
@@ -25,13 +26,6 @@ interface Props {
 	selectedId: string | null;
 	onSelect: (id: string | null) => void;
 }
-
-type ImageField = { id: string; value: string };
-
-const createImageField = (value = ""): ImageField => ({
-	id: crypto.randomUUID(),
-	value,
-});
 
 const AnnotationList = ({
 	storyId,

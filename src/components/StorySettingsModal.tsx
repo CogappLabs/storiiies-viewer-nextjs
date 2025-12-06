@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useTransition } from "react";
+import { useRef, useTransition } from "react";
 import type { Story } from "@/generated/prisma/client";
-import { trapFocus } from "@/lib/a11y";
 import { deleteStory, updateStory } from "@/lib/actions";
+import { useModalFocus } from "@/lib/hooks/useModalFocus";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
@@ -17,29 +17,8 @@ const StorySettingsModal = ({ story, onClose }: StorySettingsModalProps) => {
 	const strings = useStrings();
 	const dialogRef = useRef<HTMLDivElement>(null);
 	const titleInputRef = useRef<HTMLInputElement>(null);
-	const returnFocusRef = useRef<Element | null>(null);
 
-	// Close on Escape key
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				onClose();
-			}
-			trapFocus(dialogRef.current, e);
-		};
-		returnFocusRef.current = document.activeElement;
-		const focusTarget = titleInputRef.current || dialogRef.current;
-		focusTarget?.focus();
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => {
-			document.removeEventListener("keydown", handleKeyDown);
-			const previous = returnFocusRef.current;
-			if (previous instanceof HTMLElement) {
-				previous.focus();
-			}
-		};
-	}, [onClose]);
+	useModalFocus(dialogRef, titleInputRef, onClose);
 
 	const handleUpdateStory = (formData: FormData) => {
 		startTransition(() => {

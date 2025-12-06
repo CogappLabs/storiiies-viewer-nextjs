@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mirador Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/mirador@4.0.0/dist/mirador.min.css">
+  <style>
+    html, body, #mirador { margin: 0; padding: 0; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="mirador"></div>
+  <script src="https://unpkg.com/mirador@4.0.0/dist/mirador.min.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const manifest = params.get('manifest');
+    if (manifest) {
+      Mirador.viewer({
+        id: 'mirador',
+        windows: [{ manifestId: manifest }],
+      });
+    } else {
+      document.body.innerHTML = '<p style="padding:20px">No manifest URL provided</p>';
+    }
+  </script>
+</body>
+</html>

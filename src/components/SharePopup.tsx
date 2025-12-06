@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { trapFocus } from "@/lib/a11y";
+import { useRef, useState } from "react";
 import { UI_CONFIG } from "@/lib/config";
+import { useModalFocus } from "@/lib/hooks/useModalFocus";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
@@ -16,30 +16,9 @@ const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 	const [copied, setCopied] = useState(false);
 	const dialogRef = useRef<HTMLDivElement>(null);
 	const manifestInputRef = useRef<HTMLInputElement>(null);
-	const returnFocusRef = useRef<Element | null>(null);
 	const strings = useStrings();
 
-	// Close on Escape key
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				onClose();
-			}
-			trapFocus(dialogRef.current, e);
-		};
-		returnFocusRef.current = document.activeElement;
-		const focusTarget = manifestInputRef.current || dialogRef.current;
-		focusTarget?.focus();
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => {
-			document.removeEventListener("keydown", handleKeyDown);
-			const previous = returnFocusRef.current;
-			if (previous instanceof HTMLElement) {
-				previous.focus();
-			}
-		};
-	}, [onClose]);
+	useModalFocus(dialogRef, manifestInputRef, onClose);
 
 	const copyManifestUrl = async () => {
 		await navigator.clipboard.writeText(manifestUrl);

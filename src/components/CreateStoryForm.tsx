@@ -4,14 +4,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { createStory } from "@/lib/actions";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
+import type { IIIFInfo } from "@/lib/types";
 import { Button } from "./ui";
-
-interface IIIFInfo {
-	"@id"?: string;
-	id?: string;
-	width: number;
-	height: number;
-}
 
 type ManifestCanvasOption = {
 	id: string;

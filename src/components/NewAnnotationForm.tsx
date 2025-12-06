@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState, useTransition } from "react";
 import { createAnnotation } from "@/lib/actions";
+import { createImageField, type ImageField } from "@/lib/form-utils";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 import { Button } from "./ui";
 
@@ -23,12 +24,6 @@ const NewAnnotationForm = ({
 	onSave,
 	onCancel,
 }: NewAnnotationFormProps) => {
-	type ImageField = { id: string; value: string };
-	const createImageField = (value = ""): ImageField => ({
-		id: crypto.randomUUID(),
-		value,
-	});
-
 	const [isPending, startTransition] = useTransition();
 	const [text, setText] = useState("");
 	const [imageFields, setImageFields] = useState<ImageField[]>([]);
