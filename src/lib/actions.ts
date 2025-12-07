@@ -192,7 +192,10 @@ export const deleteStory = async (id: string) => {
 			throw new Error("Story ID is required");
 		}
 
-		await prisma.story.delete({ where: { id } });
+		await prisma.story.update({
+			where: { id },
+			data: { deletedAt: new Date() },
+		});
 		revalidatePath("/");
 		redirect("/");
 	} catch (error) {
@@ -200,9 +203,27 @@ export const deleteStory = async (id: string) => {
 	}
 };
 
+export const restoreStory = async (id: string) => {
+	try {
+		if (!id) {
+			throw new Error("Story ID is required");
+		}
+
+		await prisma.story.update({
+			where: { id },
+			data: { deletedAt: null },
+		});
+		revalidatePath("/");
+		revalidatePath("/admin/storiiies");
+	} catch (error) {
+		handleActionError("restore story", error);
+	}
+};
+
 export const getStories = async (): Promise<StoryWithCount[]> => {
 	try {
 		return await prisma.story.findMany({
+			where: { deletedAt: null },
 			orderBy: { updatedAt: "desc" },
 			include: {
 				imageSource: true,
@@ -215,14 +236,31 @@ export const getStories = async (): Promise<StoryWithCount[]> => {
 	}
 };
 
+export const getAllStories = async (): Promise<
+	(StoryWithCount & { deletedAt: Date | null })[]
+> => {
+	try {
+		return await prisma.story.findMany({
+			orderBy: [{ deletedAt: "asc" }, { updatedAt: "desc" }],
+			include: {
+				imageSource: true,
+				_count: { select: { annotations: true } },
+			},
+		});
+	} catch (error) {
+		handleActionError("fetch all stories", error);
+		throw error;
+	}
+};
+
 export const getStory = async (id: string) => {
 	try {
 		if (!id) {
 			throw new Error("Story ID is required");
 		}
 
-		return await prisma.story.findUnique({
-			where: { id },
+		return await prisma.story.findFirst({
+			where: { id, deletedAt: null },
 			include: {
 				imageSource: true,
 				annotations: {

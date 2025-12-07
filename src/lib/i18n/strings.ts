@@ -168,6 +168,7 @@ const en = {
 			annotations: "Annotations",
 			created: "Created",
 			id: "ID",
+			status: "Status",
 			actions: "Actions",
 		},
 		imageTableHeaders: {
@@ -180,12 +181,17 @@ const en = {
 		actionLabels: {
 			edit: "Edit",
 			delete: "Delete",
+			restore: "Restore",
 			storiiies: "Storiiies",
 			clover: "Clover",
 			mirador: "Mirador",
 			annona: "Annona",
 			manifest: "Manifest",
 			viewInfoJson: "info.json",
+		},
+		status: {
+			active: "Active",
+			deleted: "Deleted",
 		},
 		notUsed: "Not used",
 		deleteImageConfirm: "Delete this image? This cannot be undone.",
