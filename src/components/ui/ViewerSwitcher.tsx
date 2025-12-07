@@ -25,7 +25,7 @@ const ViewerSwitcher = ({ storyId, current }: ViewerSwitcherProps) => {
 					<Link
 						key={viewer.id}
 						href={`/preview/${viewer.id}/${storyId}`}
-						className="px-3 py-1.5 text-sm bg-cogapp-cream text-cogapp-charcoal rounded hover:bg-white"
+						className="px-3 py-1.5 text-sm bg-cogapp-cream text-cogapp-charcoal rounded hover:bg-white focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-1"
 					>
 						{viewer.label}
 					</Link>

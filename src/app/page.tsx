@@ -54,7 +54,7 @@ export default async function Home() {
 												{strings.home.byAuthor(story.author)}
 											</p>
 										)}
-										<div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+										<div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
 											<span>
 												{strings.home.storyAnnotationsLabel(
 													story._count.annotations,

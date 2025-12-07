@@ -79,7 +79,7 @@ export default async function AdminStoriiies() {
 											<td className="px-4 py-3 text-gray-600 text-sm">
 												{new Date(story.updatedAt).toLocaleDateString()}
 											</td>
-											<td className="px-4 py-3 text-gray-400 text-xs font-mono">
+											<td className="px-4 py-3 text-gray-500 text-xs font-mono">
 												{story.id}
 											</td>
 											<td className="px-4 py-3">

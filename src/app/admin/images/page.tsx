@@ -87,7 +87,7 @@ export default async function AdminImages() {
 													</span>
 												</div>
 											) : (
-												<span className="text-gray-400">
+												<span className="text-gray-500">
 													{strings.admin.notUsed}
 												</span>
 											)}

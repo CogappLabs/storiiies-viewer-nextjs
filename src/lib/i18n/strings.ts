@@ -99,6 +99,8 @@ const en = {
 		deleteAria: "Delete annotation",
 		deleteConfirm: "Delete this annotation?",
 		imageAlt: "Annotation image",
+		dragHandle: "Drag to reorder annotation",
+		removeImage: "Remove image URL",
 	},
 	newAnnotationForm: {
 		textLabel: "Annotation text",

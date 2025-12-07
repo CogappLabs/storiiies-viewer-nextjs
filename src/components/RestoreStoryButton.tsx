@@ -18,7 +18,7 @@ const RestoreStoryButton = ({ storyId }: RestoreStoryButtonProps) => {
 		<button
 			type="button"
 			onClick={handleRestore}
-			className="text-sm text-green-600 hover:underline"
+			className="text-sm text-green-600 hover:underline focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 rounded"
 		>
 			{strings.admin.actionLabels.restore}
 		</button>

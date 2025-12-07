@@ -9,6 +9,7 @@ const AdminDashboard = () => {
 			<Header
 				title={strings.app.adminTitle}
 				subtitle={strings.app.adminSubtitle}
+				backLink={{ href: "/", label: strings.common.back }}
 			/>
 			<main className="max-w-4xl mx-auto p-8">
 				<div className="grid gap-4">

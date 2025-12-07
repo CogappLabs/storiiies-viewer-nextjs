@@ -141,9 +141,13 @@ const AnnotationList = ({
 										aria-pressed={selectedId === annotation.id}
 									>
 										<div className="flex items-start gap-2">
+											{/* biome-ignore lint/a11y/useSemanticElements: Drag handle requires div for dnd library compatibility */}
 											<div
 												{...provided.dragHandleProps}
-												className="mt-1 cursor-grab text-gray-400 hover:text-gray-600"
+												role="button"
+												tabIndex={0}
+												className="mt-1 cursor-grab text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
+												aria-label={strings.annotationList.dragHandle}
 											>
 												<svg
 													className="w-4 h-4"
@@ -162,7 +166,7 @@ const AnnotationList = ({
 											</div>
 
 											<div className="flex-1 min-w-0">
-												<div className="text-xs text-gray-400 mb-1">
+												<div className="text-xs text-gray-500 mb-1">
 													{index + 1}
 												</div>
 
@@ -206,9 +210,12 @@ const AnnotationList = ({
 																				),
 																			);
 																		}}
-																		className="px-1 text-red-600 hover:bg-red-50 rounded text-xs"
+																		className="px-1 text-red-600 hover:bg-red-50 rounded text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+																		aria-label={
+																			strings.annotationList.removeImage
+																		}
 																	>
-																		x
+																		×
 																	</button>
 																</div>
 															))}
@@ -220,7 +227,7 @@ const AnnotationList = ({
 																		createImageField(),
 																	])
 																}
-																className="text-xs text-cogapp-charcoal hover:text-cogapp-charcoal/70"
+																className="text-xs text-cogapp-charcoal hover:text-cogapp-charcoal/70 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
 															>
 																{strings.newAnnotationForm.addImage}
 															</button>
@@ -267,7 +274,7 @@ const AnnotationList = ({
 															</div>
 														)}
 														<details className="mt-2 text-xs">
-															<summary className="cursor-pointer text-gray-400 hover:text-gray-600">
+															<summary className="cursor-pointer text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded">
 																{strings.annotationList.dataSummary}
 															</summary>
 															<div className="mt-1 p-2 bg-gray-50 rounded text-gray-500 font-mono space-y-1 break-all overflow-hidden">
