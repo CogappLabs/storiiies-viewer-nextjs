@@ -39,6 +39,7 @@ const en = {
 		validIIIF: (width: number, height: number) =>
 			`Valid IIIF image: ${width} × ${height} pixels`,
 		errorValidate: "Failed to validate IIIF URL",
+		invalidUrl: "Please enter a valid HTTP or HTTPS URL",
 		titleLabel: "Title *",
 		authorLabel: "Author",
 		descriptionLabel: "Description",
@@ -60,7 +61,10 @@ const en = {
 		fetchFailed: (status: number, statusText: string) =>
 			`Failed to fetch: ${status} ${statusText}`,
 		uploadLabel: "Select an image",
-		uploadHint: "Supported formats: JPEG, PNG, WebP, TIFF. Max 50MB.",
+		uploadHint: "Supported formats: JPEG, PNG, WebP, TIFF. Max 25MB.",
+		invalidFileType: "Please select an image file",
+		fileTooLarge: (maxMb: number) =>
+			`File is too large. Maximum size is ${maxMb}MB.`,
 		uploading: "Uploading and processing...",
 		uploadSuccess: "Image uploaded successfully",
 		uploadError: "Failed to upload image",

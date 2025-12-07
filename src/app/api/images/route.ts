@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getBlobBaseUrl, uploadDirectory } from "@/lib/blob";
 import { cleanupTempDir, generateIIIFTiles } from "@/lib/iiif";
 import { prisma } from "@/lib/prisma";
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -11,6 +12,13 @@ export async function POST(request: NextRequest) {
 		if (!file) {
 			return NextResponse.json(
 				{ error: "No image file provided" },
+				{ status: 400 },
+			);
+		}
+
+		if (file.size > MAX_FILE_SIZE_BYTES) {
+			return NextResponse.json(
+				{ error: `File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.` },
 				{ status: 400 },
 			);
 		}

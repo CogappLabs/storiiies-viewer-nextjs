@@ -5,6 +5,11 @@ import { useRef, useState } from "react";
 import { createStory } from "@/lib/actions";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 import type { IIIFInfo } from "@/lib/types";
+import {
+	isValidHttpUrl,
+	MAX_FILE_SIZE_BYTES,
+	MAX_FILE_SIZE_MB,
+} from "@/lib/validation";
 import { Button } from "./ui";
 
 type ManifestCanvasOption = {
@@ -167,6 +172,12 @@ const CreateStoryForm = () => {
 			return;
 		}
 
+		if (!isValidHttpUrl(trimmedInput)) {
+			setError(strings.createStoryForm.invalidUrl);
+			setLoading(false);
+			return;
+		}
+
 		const fetchJson = async (url: string) => {
 			const response = await fetch(url);
 			if (!response.ok) {
@@ -236,7 +247,12 @@ const CreateStoryForm = () => {
 
 	const handleFileUpload = async (file: File) => {
 		if (!file.type.startsWith("image/")) {
-			setError("Please select an image file");
+			setError(strings.createStoryForm.invalidFileType);
+			return;
+		}
+
+		if (file.size > MAX_FILE_SIZE_BYTES) {
+			setError(strings.createStoryForm.fileTooLarge(MAX_FILE_SIZE_MB));
 			return;
 		}
 

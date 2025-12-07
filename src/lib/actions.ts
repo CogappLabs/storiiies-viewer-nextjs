@@ -8,6 +8,7 @@ import type {
 	Story,
 } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isValidHttpUrl } from "@/lib/validation";
 
 type StoryWithImageSource = Story & { imageSource: ImageSource };
 type StoryWithCount = StoryWithImageSource & {
@@ -40,16 +41,6 @@ const getPositiveInt = (formData: FormData, key: string): number => {
 		throw new Error(`${key} must be a positive number`);
 	}
 	return num;
-};
-
-// Validate URL format (basic check)
-const isValidUrl = (url: string): boolean => {
-	try {
-		new URL(url);
-		return true;
-	} catch {
-		return false;
-	}
 };
 
 // Validate annotation coordinates
@@ -117,7 +108,7 @@ export const createStory = async (formData: FormData) => {
 		const attribution = getOptionalString(formData, "attribution");
 		const infoJsonUrl = getString(formData, "imageUrl");
 
-		if (!isValidUrl(infoJsonUrl)) {
+		if (!isValidHttpUrl(infoJsonUrl)) {
 			throw new Error("Invalid image URL");
 		}
 
@@ -295,7 +286,7 @@ export const createAnnotation = async (
 		// Validate image URLs if provided
 		const validImageUrls = data.imageUrls?.filter((url) => {
 			if (!url.trim()) return false;
-			return isValidUrl(url);
+			return isValidHttpUrl(url);
 		});
 
 		const maxOrdinal = await prisma.annotation.aggregate({
@@ -425,7 +416,7 @@ export const addAnnotationImage = async (
 			throw new Error("Annotation ID and Story ID are required");
 		}
 
-		if (!imageUrl || !isValidUrl(imageUrl)) {
+		if (!imageUrl || !isValidHttpUrl(imageUrl)) {
 			throw new Error("Valid image URL is required");
 		}
 
@@ -475,7 +466,9 @@ export const updateAnnotationImages = async (
 		}
 
 		// Filter and validate URLs
-		const validUrls = imageUrls.filter((url) => url.trim() && isValidUrl(url));
+		const validUrls = imageUrls.filter(
+			(url) => url.trim() && isValidHttpUrl(url),
+		);
 
 		// Delete all existing images and recreate with new order
 		await prisma.$transaction([
