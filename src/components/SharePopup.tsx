@@ -2,9 +2,8 @@
 
 import { useRef, useState } from "react";
 import { UI_CONFIG } from "@/lib/config";
-import { useModalFocus } from "@/lib/hooks/useModalFocus";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
-import { Button } from "./ui";
+import { Button, ButtonLink, Modal } from "./ui";
 
 interface SharePopupProps {
 	storyId: string;
@@ -14,11 +13,8 @@ interface SharePopupProps {
 
 const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 	const [copied, setCopied] = useState(false);
-	const dialogRef = useRef<HTMLDivElement>(null);
 	const manifestInputRef = useRef<HTMLInputElement>(null);
 	const strings = useStrings();
-
-	useModalFocus(dialogRef, manifestInputRef, onClose);
 
 	const copyManifestUrl = async () => {
 		await navigator.clipboard.writeText(manifestUrl);
@@ -27,35 +23,14 @@ const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 	};
 
 	return (
-		<>
-			{/* Backdrop */}
-			<div
-				className="fixed inset-0 z-40 bg-black/40"
-				onClick={onClose}
-				aria-hidden="true"
-			/>
-			<div
-				ref={dialogRef}
-				className="absolute top-14 right-4 bg-white border rounded-lg shadow-lg p-4 z-50 w-96"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="share-dialog-title"
-				aria-describedby="share-dialog-description"
-				tabIndex={-1}
-			>
-				<div className="flex items-center justify-between mb-2">
-					<h3 className="font-medium" id="share-dialog-title">
-						{strings.sharePopup.title}
-					</h3>
-					<button
-						type="button"
-						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender rounded"
-						aria-label={strings.common.close}
-					>
-						✕
-					</button>
-				</div>
+		<Modal
+			title={strings.sharePopup.title}
+			titleId="share-dialog-title"
+			onClose={onClose}
+			initialFocusRef={manifestInputRef}
+			describedById="share-dialog-description"
+		>
+			<div className="space-y-4">
 				<div className="flex gap-2">
 					<input
 						type="text"
@@ -69,42 +44,46 @@ const SharePopup = ({ storyId, manifestUrl, onClose }: SharePopupProps) => {
 						{copied ? strings.sharePopup.copied : strings.sharePopup.copy}
 					</Button>
 				</div>
-				<p className="text-xs text-gray-500 mt-2" id="share-dialog-description">
+				<p className="text-xs text-gray-500" id="share-dialog-description">
 					{strings.sharePopup.instructions}
 				</p>
-				<div className="mt-3 pt-3 border-t">
+				<div className="pt-4 border-t">
 					<p className="text-xs text-gray-500 mb-2">
 						{strings.sharePopup.previewHeading}
 					</p>
 					<div className="flex gap-2 flex-wrap">
-						<a
+						<ButtonLink
 							href={`/preview/storiiies/${storyId}`}
-							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
+							size="sm"
+							className="flex-1 justify-center"
 						>
 							{strings.viewers.storiiies}
-						</a>
-						<a
+						</ButtonLink>
+						<ButtonLink
 							href={`/preview/clover/${storyId}`}
-							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
+							size="sm"
+							className="flex-1 justify-center"
 						>
 							{strings.viewers.clover}
-						</a>
-						<a
+						</ButtonLink>
+						<ButtonLink
 							href={`/preview/mirador/${storyId}`}
-							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
+							size="sm"
+							className="flex-1 justify-center"
 						>
 							{strings.viewers.mirador}
-						</a>
-						<a
+						</ButtonLink>
+						<ButtonLink
 							href={`/preview/annona/${storyId}`}
-							className="flex-1 px-3 py-2 text-sm text-center border rounded hover:bg-gray-50"
+							size="sm"
+							className="flex-1 justify-center"
 						>
 							{strings.viewers.annona}
-						</a>
+						</ButtonLink>
 					</div>
 				</div>
 			</div>
-		</>
+		</Modal>
 	);
 };
 

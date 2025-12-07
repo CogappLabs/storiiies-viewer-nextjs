@@ -88,19 +88,19 @@ const Editor = ({ story }: Props) => {
 					<>
 						<Button
 							variant="secondary"
-							onClick={() => setShowManifestLink(!showManifestLink)}
-							aria-expanded={showManifestLink}
-							aria-haspopup="dialog"
-						>
-							{strings.editor.previewButton}
-						</Button>
-						<Button
-							variant="secondary"
 							onClick={() => setShowSettings(!showSettings)}
 							aria-expanded={showSettings}
 							aria-haspopup="dialog"
 						>
 							{strings.editor.settingsButton}
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={() => setShowManifestLink(!showManifestLink)}
+							aria-expanded={showManifestLink}
+							aria-haspopup="dialog"
+						>
+							{strings.editor.previewButton}
 						</Button>
 					</>
 				}

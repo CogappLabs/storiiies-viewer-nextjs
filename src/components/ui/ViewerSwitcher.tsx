@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
+import { ButtonLink } from "./Button";
 
 interface ViewerSwitcherProps {
 	storyId: string;
@@ -22,13 +22,13 @@ const ViewerSwitcher = ({ storyId, current }: ViewerSwitcherProps) => {
 			{viewers
 				.filter((v) => v.id !== current)
 				.map((viewer) => (
-					<Link
+					<ButtonLink
 						key={viewer.id}
 						href={`/preview/${viewer.id}/${storyId}`}
-						className="px-3 py-1.5 text-sm bg-cogapp-cream text-cogapp-charcoal rounded hover:bg-white focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-1"
+						className="min-w-24 justify-center"
 					>
 						{viewer.label}
-					</Link>
+					</ButtonLink>
 				))}
 		</>
 	);

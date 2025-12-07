@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { createAnnotation } from "@/lib/actions";
 import { createImageField, type ImageField } from "@/lib/form-utils";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
@@ -29,24 +29,6 @@ const NewAnnotationForm = ({
 	const [imageFields, setImageFields] = useState<ImageField[]>([]);
 	const strings = useStrings();
 	const textAreaId = useId();
-
-	const dataPreview = useMemo(() => {
-		try {
-			return JSON.stringify(
-				{
-					rect: pendingData.rect,
-					viewport: pendingData.viewport,
-					imageUrls: imageFields
-						.map((field) => field.value.trim())
-						.filter((value) => value),
-				},
-				null,
-				2,
-			);
-		} catch {
-			return null;
-		}
-	}, [imageFields, pendingData]);
 
 	const handleSave = () => {
 		startTransition(async () => {
@@ -137,20 +119,6 @@ const NewAnnotationForm = ({
 					{strings.newAnnotationForm.cancel}
 				</Button>
 			</div>
-			<details className="mt-3 text-xs">
-				<summary className="cursor-pointer text-gray-500">
-					{strings.common.data}
-				</summary>
-				{dataPreview ? (
-					<pre className="mt-1 p-2 bg-white rounded text-gray-600 overflow-x-auto">
-						{dataPreview}
-					</pre>
-				) : (
-					<p className="mt-1 p-2 bg-white rounded text-red-600 text-xs">
-						{strings.newAnnotationForm.previewUnavailable}
-					</p>
-				)}
-			</details>
 		</div>
 	);
 };

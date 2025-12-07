@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions";
 import { createImageField, type ImageField } from "@/lib/form-utils";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
+import { Button } from "./ui";
 
 type AnnotationWithImages = Annotation & { images: AnnotationImage[] };
 
@@ -233,20 +234,22 @@ const AnnotationList = ({
 															</button>
 														</div>
 														<div className="flex gap-2">
-															<button
+															<Button
 																type="button"
 																onClick={saveEdit}
-																className="px-2 py-1 bg-cogapp-charcoal text-white text-xs rounded hover:bg-cogapp-charcoal/90 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
+																size="sm"
+																showArrow={false}
 															>
 																{strings.newAnnotationForm.save}
-															</button>
-															<button
+															</Button>
+															<Button
 																type="button"
 																onClick={cancelEdit}
-																className="px-2 py-1 bg-cogapp-cream text-cogapp-charcoal text-xs rounded hover:bg-white focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
+																variant="secondary"
+																size="sm"
 															>
 																{strings.newAnnotationForm.cancel}
-															</button>
+															</Button>
 														</div>
 													</div>
 												) : (

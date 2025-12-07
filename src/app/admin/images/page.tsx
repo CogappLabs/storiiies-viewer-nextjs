@@ -2,7 +2,7 @@ import Link from "next/link";
 import DeleteImageButton from "@/components/DeleteImageButton";
 import { Header } from "@/components/ui";
 import { getUploadedImages } from "@/lib/actions";
-import { getStrings } from "@/lib/i18n/strings";
+import { formatDate, getStrings } from "@/lib/i18n/strings";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +93,7 @@ export default async function AdminImages() {
 											)}
 										</td>
 										<td className="px-4 py-3 text-gray-600 text-sm">
-											{new Date(image.createdAt).toLocaleDateString()}
+											{formatDate(image.createdAt)}
 										</td>
 										<td className="px-4 py-3">
 											<div className="flex gap-2 justify-end">

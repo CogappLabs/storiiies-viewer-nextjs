@@ -2,7 +2,7 @@ import Link from "next/link";
 import CreateStoryForm from "@/components/CreateStoryForm";
 import { Header } from "@/components/ui";
 import { getStories } from "@/lib/actions";
-import { getStrings } from "@/lib/i18n/strings";
+import { formatDate, getStrings } from "@/lib/i18n/strings";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,7 @@ export default async function Home() {
 											</span>
 											<span>
 												{strings.home.storyUpdatedLabel(
-													new Date(story.updatedAt).toLocaleDateString(),
+													formatDate(story.updatedAt),
 												)}
 											</span>
 										</div>

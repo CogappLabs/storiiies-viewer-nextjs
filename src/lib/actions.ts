@@ -241,7 +241,7 @@ export const getAllStories = async (): Promise<
 > => {
 	try {
 		return await prisma.story.findMany({
-			orderBy: [{ deletedAt: "asc" }, { updatedAt: "desc" }],
+			orderBy: [{ deletedAt: "desc" }, { updatedAt: "desc" }],
 			include: {
 				imageSource: true,
 				_count: { select: { annotations: true } },

@@ -144,29 +144,34 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 				const imageRect =
 					viewer.viewport.viewportToImageRectangle(viewportRect);
 
-				// Clamp to image bounds
-				const x = Math.max(0, imageRect.x);
-				const y = Math.max(0, imageRect.y);
-				const width = Math.min(imageRect.width, imageWidth - x);
-				const height = Math.min(imageRect.height, imageHeight - y);
+				// Guard against invalid values - return full image bounds as fallback
+				if (
+					!Number.isFinite(imageRect.x) ||
+					!Number.isFinite(imageRect.y) ||
+					!Number.isFinite(imageRect.width) ||
+					!Number.isFinite(imageRect.height)
+				) {
+					return {
+						rect: { x: 0, y: 0, width: imageWidth, height: imageHeight },
+						viewport: { x: 0, y: 0, width: imageWidth, height: imageHeight },
+					};
+				}
 
-				// Ensure we don't exceed image dimensions
-				const clampedWidth = Math.min(width, imageWidth);
-				const clampedHeight = Math.min(height, imageHeight);
+				// Calculate the intersection of the viewport rect with the image bounds
+				const left = Math.max(0, imageRect.x);
+				const top = Math.max(0, imageRect.y);
+				const right = Math.min(imageWidth, imageRect.x + imageRect.width);
+				const bottom = Math.min(imageHeight, imageRect.y + imageRect.height);
+
+				// Ensure we have valid dimensions (at least 1 pixel)
+				const x = Math.round(left);
+				const y = Math.round(top);
+				const width = Math.round(Math.max(1, right - left));
+				const height = Math.round(Math.max(1, bottom - top));
 
 				return {
-					rect: {
-						x,
-						y,
-						width: clampedWidth,
-						height: clampedHeight,
-					},
-					viewport: {
-						x,
-						y,
-						width: clampedWidth,
-						height: clampedHeight,
-					},
+					rect: { x, y, width, height },
+					viewport: { x, y, width, height },
 				};
 			},
 		}));
@@ -319,31 +324,16 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						});
 					};
 
-					// Watch for new annotations or position/size changes
+					// Watch only for new annotations (childList), not attribute changes
+					// Crosshair positions are updated via OpenSeadragon events instead
 					cleanupCrosshairEffects();
 
 					crosshairObserver = new MutationObserver((mutations) => {
 						for (const mutation of mutations) {
-							// Only update on childList changes (new annotations) or x/y/width/height attribute changes
+							// Only update on childList changes (new annotations added/removed)
 							if (mutation.type === "childList") {
 								requestAnimationFrame(updateAllCrosshairs);
 								break;
-							}
-							if (mutation.type === "attributes") {
-								const attr = mutation.attributeName;
-								if (
-									attr === "x" ||
-									attr === "y" ||
-									attr === "width" ||
-									attr === "height"
-								) {
-									const shape = (mutation.target as Element).closest(
-										".a9s-annotation, .a9s-selection",
-									);
-									if (shape) {
-										requestAnimationFrame(() => updateCrosshairs(shape));
-									}
-								}
 							}
 						}
 					});
@@ -355,10 +345,12 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						crosshairObserver.observe(svgOverlay, {
 							childList: true,
 							subtree: true,
-							attributes: true,
-							attributeFilter: [...VIEWER_CONFIG.crosshair.observedAttributes],
+							attributes: false, // Don't watch attributes - too expensive during pan/zoom
 						});
 					}
+
+					// Update crosshairs when viewport animation completes (after pan/zoom)
+					viewer.addHandler("animation-finish", updateAllCrosshairs);
 
 					// Initial update
 					initialCrosshairTimeout = window.setTimeout(
@@ -377,6 +369,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 			return () => {
 				isDisposed = true;
 				cleanupCrosshairEffects();
+				viewer.removeAllHandlers("animation-finish");
 				annoRef.current?.destroy();
 				viewer.destroy();
 				viewerRef.current = null;

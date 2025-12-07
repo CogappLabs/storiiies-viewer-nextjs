@@ -1,16 +1,27 @@
-import { type ButtonHTMLAttributes, forwardRef } from "react";
+import Link from "next/link";
+import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-type ButtonSize = "sm" | "md";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonSize = "sm" | "md";
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonBaseProps {
 	variant?: ButtonVariant;
 	size?: ButtonSize;
 	showArrow?: boolean;
+	children: ReactNode;
+	className?: string;
+}
+
+interface ButtonProps
+	extends ButtonBaseProps,
+		Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof ButtonBaseProps> {}
+
+interface ButtonLinkProps extends ButtonBaseProps {
+	href: string;
 }
 
 // Cogapp button styles: color inversion on hover, 1px border
-const variantStyles: Record<ButtonVariant, string> = {
+export const buttonVariantStyles: Record<ButtonVariant, string> = {
 	primary:
 		"bg-cogapp-charcoal text-cogapp-cream border-cogapp-cream hover:bg-cogapp-cream hover:text-cogapp-charcoal",
 	secondary:
@@ -21,10 +32,19 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 // Cogapp sizing: 8px 12px 6px 12px padding, 16px font, 500 weight
-const sizeStyles: Record<ButtonSize, string> = {
+export const buttonSizeStyles: Record<ButtonSize, string> = {
 	sm: "pt-1 pb-0.5 px-2 text-sm",
 	md: "pt-2 pb-1.5 px-3 text-base",
 };
+
+export const buttonBaseStyles =
+	"inline-flex items-center font-medium leading-7 border focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 transition-colors";
+
+export const getButtonStyles = (
+	variant: ButtonVariant = "primary",
+	size: ButtonSize = "md",
+) =>
+	`${buttonBaseStyles} ${buttonVariantStyles[variant]} ${buttonSizeStyles[size]}`;
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 	(
@@ -46,14 +66,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 			<button
 				ref={ref}
 				className={`
-					inline-flex items-center
-					font-medium leading-7
-					border
-					focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2
+					${buttonBaseStyles}
 					disabled:opacity-50 disabled:cursor-not-allowed
-					transition-colors
-					${variantStyles[variant]}
-					${sizeStyles[size]}
+					${buttonVariantStyles[variant]}
+					${buttonSizeStyles[size]}
 					${className}
 				`}
 				disabled={disabled}
@@ -74,5 +90,38 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
+
+export const ButtonLink = ({
+	href,
+	className = "",
+	variant = "secondary",
+	size = "md",
+	showArrow,
+	children,
+}: ButtonLinkProps) => {
+	const displayArrow = showArrow ?? false;
+
+	return (
+		<Link
+			href={href}
+			className={`
+				${buttonBaseStyles}
+				${buttonVariantStyles[variant]}
+				${buttonSizeStyles[size]}
+				${className}
+			`}
+		>
+			{children}
+			{displayArrow && (
+				<span
+					className="ml-2 transition-transform group-hover:translate-x-1"
+					aria-hidden="true"
+				>
+					→
+				</span>
+			)}
+		</Link>
+	);
+};
 
 export default Button;

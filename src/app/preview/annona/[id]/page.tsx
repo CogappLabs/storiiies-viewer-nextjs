@@ -12,6 +12,7 @@ const AnnonaPreview = () => {
 	const [manifestUrl, setManifestUrl] = useState("");
 	const [scriptsLoaded, setScriptsLoaded] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const storyboardRef = useRef<HTMLDivElement>(null);
 	const strings = useStrings();
 	const viewerLabel = strings.common.viewer(strings.viewers.annona);
 
@@ -23,17 +24,33 @@ const AnnonaPreview = () => {
 
 	// Create the web component safely via DOM API instead of dangerouslySetInnerHTML
 	useEffect(() => {
-		if (!manifestUrl || !scriptsLoaded || !containerRef.current) return;
+		if (
+			!manifestUrl ||
+			!scriptsLoaded ||
+			!storyboardRef.current ||
+			!containerRef.current
+		)
+			return;
 
-		const container = containerRef.current;
+		const container = storyboardRef.current;
+		const height = containerRef.current.clientHeight;
 		container.innerHTML = "";
 
 		const storyboard = document.createElement("iiif-storyboard");
 		storyboard.setAttribute("url", manifestUrl);
-		storyboard.setAttribute("styling", "fit: fill;");
+		storyboard.setAttribute("styling", `height: ${height};`);
 		container.appendChild(storyboard);
 
+		const handleResize = () => {
+			if (containerRef.current) {
+				const newHeight = containerRef.current.clientHeight;
+				storyboard.setAttribute("styling", `height: ${newHeight};`);
+			}
+		};
+
+		window.addEventListener("resize", handleResize);
 		return () => {
+			window.removeEventListener("resize", handleResize);
 			container.innerHTML = "";
 		};
 	}, [manifestUrl, scriptsLoaded]);
@@ -59,9 +76,9 @@ const AnnonaPreview = () => {
 				actions={<ViewerSwitcher storyId={id} current="annona" />}
 			/>
 
-			<div className="flex-1 p-4">
+			<div ref={containerRef} className="flex-1">
 				{scriptsLoaded ? (
-					<div ref={containerRef} className="h-full w-full" />
+					<div ref={storyboardRef} className="h-full w-full" />
 				) : (
 					<div className="flex items-center justify-center h-full text-gray-500">
 						{strings.preview.loadingAnnona}

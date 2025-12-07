@@ -3,7 +3,7 @@ import DeleteStoryButton from "@/components/DeleteStoryButton";
 import RestoreStoryButton from "@/components/RestoreStoryButton";
 import { Header } from "@/components/ui";
 import { getAllStories } from "@/lib/actions";
-import { getStrings } from "@/lib/i18n/strings";
+import { formatDate, getStrings } from "@/lib/i18n/strings";
 
 export const dynamic = "force-dynamic";
 
@@ -73,11 +73,11 @@ export default async function AdminStoriiies() {
 											<td className="px-4 py-3 text-gray-600">
 												{story._count.annotations}
 											</td>
-											<td className="px-4 py-3 text-gray-600 text-sm">
-												{new Date(story.createdAt).toLocaleDateString()}
+											<td className="px-4 py-3 text-gray-600 text-sm whitespace-nowrap">
+												{formatDate(story.createdAt)}
 											</td>
-											<td className="px-4 py-3 text-gray-600 text-sm">
-												{new Date(story.updatedAt).toLocaleDateString()}
+											<td className="px-4 py-3 text-gray-600 text-sm whitespace-nowrap">
+												{formatDate(story.updatedAt)}
 											</td>
 											<td className="px-4 py-3 text-gray-500 text-xs font-mono">
 												{story.id}
@@ -97,7 +97,7 @@ export default async function AdminStoriiies() {
 													</span>
 													{isDeleted && story.deletedAt && (
 														<span className="text-xs text-gray-500">
-															{new Date(story.deletedAt).toLocaleDateString()}
+															{formatDate(story.deletedAt)}
 														</span>
 													)}
 												</div>
