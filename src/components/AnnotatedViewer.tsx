@@ -3,6 +3,7 @@
 import OpenSeadragon from "openseadragon";
 import {
 	forwardRef,
+	useCallback,
 	useEffect,
 	useImperativeHandle,
 	useRef,
@@ -11,6 +12,16 @@ import {
 import type { Annotation } from "@/generated/prisma/client";
 import { VIEWER_CONFIG } from "@/lib/config";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
+
+// Store viewer instances outside React to prevent HMR serialization issues
+// (Turbopack tries to serialize component state, causing "Max payload size exceeded")
+const viewerInstances = new WeakMap<
+	HTMLDivElement,
+	{
+		viewer: OpenSeadragon.Viewer;
+		anno: AnnotoriousInstance | null;
+	}
+>();
 
 // Annotorious types
 interface W3CAnnotation {
@@ -130,44 +141,41 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 	) => {
 		const strings = useStrings();
 		const containerRef = useRef<HTMLDivElement>(null);
-		const viewerRef = useRef<OpenSeadragon.Viewer | null>(null);
-		const annoRef = useRef<AnnotoriousInstance | null>(null);
 		const [isReady, setIsReady] = useState(false);
+
+		// Helper to get viewer from WeakMap (avoids storing in refs which can be serialized)
+		const getInstances = useCallback(() => {
+			if (!containerRef.current) return null;
+			return viewerInstances.get(containerRef.current) ?? null;
+		}, []);
 
 		// Expose getViewportBounds method via ref
 		useImperativeHandle(ref, () => ({
 			getViewportBounds: (): AnnotationData | null => {
-				const viewer = viewerRef.current;
-				if (!viewer) return null;
+				const instances = getInstances();
+				if (!instances?.viewer) return null;
+				const viewer = instances.viewer;
 
-				const viewportRect = viewer.viewport.getBounds();
-				const imageRect =
-					viewer.viewport.viewportToImageRectangle(viewportRect);
-
-				// Guard against invalid values - return full image bounds as fallback
-				if (
-					!Number.isFinite(imageRect.x) ||
-					!Number.isFinite(imageRect.y) ||
-					!Number.isFinite(imageRect.width) ||
-					!Number.isFinite(imageRect.height)
-				) {
+				// If at or near minimum zoom, return full image bounds
+				// (viewport calculations are unreliable with letterboxing)
+				const zoom = viewer.viewport.getZoom();
+				const minZoom = viewer.viewport.getMinZoom();
+				if (zoom <= minZoom * 1.05) {
 					return {
 						rect: { x: 0, y: 0, width: imageWidth, height: imageHeight },
 						viewport: { x: 0, y: 0, width: imageWidth, height: imageHeight },
 					};
 				}
 
-				// Calculate the intersection of the viewport rect with the image bounds
-				const left = Math.max(0, imageRect.x);
-				const top = Math.max(0, imageRect.y);
-				const right = Math.min(imageWidth, imageRect.x + imageRect.width);
-				const bottom = Math.min(imageHeight, imageRect.y + imageRect.height);
+				const viewportRect = viewer.viewport.getBounds();
+				const imageRect =
+					viewer.viewport.viewportToImageRectangle(viewportRect);
 
-				// Ensure we have valid dimensions (at least 1 pixel)
-				const x = Math.round(left);
-				const y = Math.round(top);
-				const width = Math.round(Math.max(1, right - left));
-				const height = Math.round(Math.max(1, bottom - top));
+				// Clamp to image bounds
+				const x = Math.round(Math.max(0, imageRect.x));
+				const y = Math.round(Math.max(0, imageRect.y));
+				const width = Math.round(Math.min(imageRect.width, imageWidth - x));
+				const height = Math.round(Math.min(imageRect.height, imageHeight - y));
 
 				return {
 					rect: { x, y, width, height },
@@ -195,14 +203,16 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 				}
 			};
 
+			const container = containerRef.current;
 			const viewer = OpenSeadragon({
-				element: containerRef.current,
+				element: container,
 				tileSources: `${imageUrl}/info.json`,
 				showNavigationControl: false,
 				gestureSettingsMouse: { clickToZoom: false },
 			});
 
-			viewerRef.current = viewer;
+			// Store in WeakMap (outside React) to prevent HMR serialization issues
+			viewerInstances.set(container, { viewer, anno: null });
 
 			// Wait for OpenSeadragon to be ready before initializing Annotorious
 			viewer.addHandler("open", () => {
@@ -227,7 +237,8 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 						return;
 					}
 
-					annoRef.current = anno;
+					// Update WeakMap with anno instance
+					viewerInstances.set(container, { viewer, anno });
 
 					// Function to add or update crosshairs on an annotation/selection element
 					const updateCrosshairs = (shapeGroup: Element) => {
@@ -370,10 +381,10 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 				isDisposed = true;
 				cleanupCrosshairEffects();
 				viewer.removeAllHandlers("animation-finish");
-				annoRef.current?.destroy();
+				const instances = viewerInstances.get(container);
+				instances?.anno?.destroy();
 				viewer.destroy();
-				viewerRef.current = null;
-				annoRef.current = null;
+				viewerInstances.delete(container);
 				setIsReady(false);
 			};
 		}, [imageUrl]);
@@ -381,7 +392,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		// Handle annotation events once Annotorious is ready
 		useEffect(() => {
 			if (!isReady) return;
-			const anno = annoRef.current;
+			const anno = getInstances()?.anno;
 			if (!anno) return;
 
 			const handleUpdate = (w3cAnnotation: W3CAnnotation) => {
@@ -412,25 +423,32 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 				anno.off("deleteAnnotation", handleDelete);
 				anno.off("selectAnnotation", handleSelect);
 			};
-		}, [isReady, onAnnotationUpdate, onAnnotationDelete, onAnnotationSelect]);
+		}, [
+			isReady,
+			onAnnotationUpdate,
+			onAnnotationDelete,
+			onAnnotationSelect,
+			getInstances,
+		]);
 
 		// Sync annotations from props
 		useEffect(() => {
 			if (!isReady) return;
-			const anno = annoRef.current;
+			const anno = getInstances()?.anno;
 			if (!anno) return;
 
 			const w3cAnnotations = annotations.map((a) => toW3C(a, imageUrl));
 			anno.setAnnotations(w3cAnnotations);
-		}, [annotations, imageUrl, isReady]);
+		}, [annotations, imageUrl, isReady, getInstances]);
 
 		// Handle selected annotation
 		useEffect(() => {
-			if (selectedAnnotationId && annoRef.current) {
-				annoRef.current.selectAnnotation(selectedAnnotationId);
-				annoRef.current.fitBounds(selectedAnnotationId, false);
+			const anno = getInstances()?.anno;
+			if (selectedAnnotationId && anno) {
+				anno.selectAnnotation(selectedAnnotationId);
+				anno.fitBounds(selectedAnnotationId, false);
 			}
-		}, [selectedAnnotationId]);
+		}, [selectedAnnotationId, getInstances]);
 
 		// Toggle crosshair visibility
 		useEffect(() => {
@@ -445,7 +463,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		}, [showCrosshairs]);
 
 		const handleZoomIn = () => {
-			const viewer = viewerRef.current;
+			const viewer = getInstances()?.viewer;
 			if (viewer) {
 				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomInFactor);
 				viewer.viewport.applyConstraints();
@@ -453,7 +471,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		};
 
 		const handleZoomOut = () => {
-			const viewer = viewerRef.current;
+			const viewer = getInstances()?.viewer;
 			if (viewer) {
 				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomOutFactor);
 				viewer.viewport.applyConstraints();
@@ -461,7 +479,7 @@ const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
 		};
 
 		const handleHome = () => {
-			const viewer = viewerRef.current;
+			const viewer = getInstances()?.viewer;
 			if (viewer) {
 				viewer.viewport.goHome();
 			}

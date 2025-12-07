@@ -234,15 +234,33 @@ const CreateStoryForm = () => {
 		}
 	};
 
-	const handleManifestSelect = (optionId: string) => {
+	const handleManifestSelect = async (optionId: string) => {
 		const option = manifestOptions.find(
 			(candidate) => candidate.id === optionId,
 		);
 		if (!option) return;
 		setSelectedManifestId(optionId);
-		setIiifInfo({ width: option.width, height: option.height });
 		setInfoUrl(option.infoUrl);
 		setImageSourceType("manifest");
+
+		// Fetch actual dimensions from info.json rather than trusting canvas metadata
+		// (manifests sometimes have swapped width/height in canvas)
+		try {
+			const response = await fetch(option.infoUrl);
+			if (response.ok) {
+				const infoJson = await response.json();
+				if (
+					typeof infoJson.width === "number" &&
+					typeof infoJson.height === "number"
+				) {
+					setIiifInfo({ width: infoJson.width, height: infoJson.height });
+					return;
+				}
+			}
+		} catch {
+			// Fall back to canvas dimensions if info.json fetch fails
+		}
+		setIiifInfo({ width: option.width, height: option.height });
 	};
 
 	const handleFileUpload = async (file: File) => {
