@@ -75,12 +75,17 @@ const en = {
 		settingsButton: "Settings",
 		annotationsHeading: "Annotations",
 		addButton: "Add",
-		noAnnotations: "No annotations yet. Click “Add” to create one.",
+		noAnnotations: 'No annotations yet. Click "Add" to create one.',
 		sidebarLabel: "Annotations sidebar",
 		crosshairs: {
 			show: "Show crosshairs",
 			hide: "Hide crosshairs",
 		},
+		deletedTitle: "Story Deleted",
+		deletedHeading: "This story has been deleted",
+		deletedMessage:
+			"The story you are looking for has been deleted and is no longer available.",
+		deletedBackHome: "Go to Homepage",
 	},
 	annotationList: {
 		noItems:
@@ -167,6 +172,7 @@ const en = {
 			author: "Author",
 			annotations: "Annotations",
 			created: "Created",
+			updated: "Updated",
 			id: "ID",
 			status: "Status",
 			actions: "Actions",

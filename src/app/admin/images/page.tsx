@@ -61,12 +61,31 @@ export default async function AdminImages() {
 										</td>
 										<td className="px-4 py-3 text-gray-600">
 											{image.story ? (
-												<Link
-													href={`/editor/${image.story.id}`}
-													className="text-cogapp-charcoal hover:underline"
-												>
-													{image.story.title}
-												</Link>
+												<div className="flex items-center gap-2">
+													{image.story.deletedAt ? (
+														<span className="text-gray-400 line-through">
+															{image.story.title}
+														</span>
+													) : (
+														<Link
+															href={`/editor/${image.story.id}`}
+															className="text-cogapp-charcoal hover:underline"
+														>
+															{image.story.title}
+														</Link>
+													)}
+													<span
+														className={`text-xs font-medium px-2 py-0.5 rounded ${
+															image.story.deletedAt
+																? "bg-red-100 text-red-700"
+																: "bg-green-100 text-green-700"
+														}`}
+													>
+														{image.story.deletedAt
+															? strings.admin.status.deleted
+															: strings.admin.status.active}
+													</span>
+												</div>
 											) : (
 												<span className="text-gray-400">
 													{strings.admin.notUsed}

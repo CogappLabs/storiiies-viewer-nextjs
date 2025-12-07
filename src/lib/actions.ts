@@ -277,6 +277,21 @@ export const getStory = async (id: string) => {
 	}
 };
 
+export const isStoryDeleted = async (id: string): Promise<boolean> => {
+	try {
+		if (!id) return false;
+
+		const story = await prisma.story.findUnique({
+			where: { id },
+			select: { deletedAt: true },
+		});
+
+		return story?.deletedAt !== null && story?.deletedAt !== undefined;
+	} catch {
+		return false;
+	}
+};
+
 // Annotation actions
 export const createAnnotation = async (
 	storyId: string,
@@ -530,7 +545,7 @@ export const updateAnnotationImages = async (
 
 // ImageSource actions
 export type ImageSourceWithStory = ImageSource & {
-	story: { id: string; title: string } | null;
+	story: { id: string; title: string; deletedAt: Date | null } | null;
 };
 
 export const getImageSources = async (): Promise<ImageSourceWithStory[]> => {
@@ -539,7 +554,7 @@ export const getImageSources = async (): Promise<ImageSourceWithStory[]> => {
 			orderBy: { createdAt: "desc" },
 			include: {
 				story: {
-					select: { id: true, title: true },
+					select: { id: true, title: true, deletedAt: true },
 				},
 			},
 		});
@@ -558,7 +573,7 @@ export const getUploadedImages = async (): Promise<ImageSourceWithStory[]> => {
 			orderBy: { createdAt: "desc" },
 			include: {
 				story: {
-					select: { id: true, title: true },
+					select: { id: true, title: true, deletedAt: true },
 				},
 			},
 		});

@@ -76,21 +76,31 @@ export default async function AdminStoriiies() {
 											<td className="px-4 py-3 text-gray-600 text-sm">
 												{new Date(story.createdAt).toLocaleDateString()}
 											</td>
+											<td className="px-4 py-3 text-gray-600 text-sm">
+												{new Date(story.updatedAt).toLocaleDateString()}
+											</td>
 											<td className="px-4 py-3 text-gray-400 text-xs font-mono">
 												{story.id}
 											</td>
 											<td className="px-4 py-3">
-												<span
-													className={`text-xs font-medium px-2 py-1 rounded ${
-														isDeleted
-															? "bg-red-100 text-red-700"
-															: "bg-green-100 text-green-700"
-													}`}
-												>
-													{isDeleted
-														? strings.admin.status.deleted
-														: strings.admin.status.active}
-												</span>
+												<div className="flex flex-col gap-1">
+													<span
+														className={`text-xs font-medium px-2 py-1 rounded w-fit ${
+															isDeleted
+																? "bg-red-100 text-red-700"
+																: "bg-green-100 text-green-700"
+														}`}
+													>
+														{isDeleted
+															? strings.admin.status.deleted
+															: strings.admin.status.active}
+													</span>
+													{isDeleted && story.deletedAt && (
+														<span className="text-xs text-gray-500">
+															{new Date(story.deletedAt).toLocaleDateString()}
+														</span>
+													)}
+												</div>
 											</td>
 											<td className="px-4 py-3">
 												<div className="flex gap-2 justify-end">

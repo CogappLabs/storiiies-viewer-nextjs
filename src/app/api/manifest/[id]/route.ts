@@ -27,6 +27,13 @@ export async function GET(
 		return NextResponse.json({ error: "Story not found" }, { status: 404 });
 	}
 
+	if (story.deletedAt) {
+		return NextResponse.json(
+			{ error: "This story has been deleted and is no longer available" },
+			{ status: 410 },
+		);
+	}
+
 	// Get image service URL (strip /info.json from the end)
 	const imageServiceUrl = story.imageSource.infoJsonUrl.replace(
 		/\/info\.json$/,
