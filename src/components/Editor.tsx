@@ -115,15 +115,34 @@ const Editor = ({ story }: Props) => {
 			)}
 
 			{/* Main content */}
-			<div className="flex-1 flex overflow-hidden">
-				{/* Sidebar - Left side */}
+			<div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+				{/* Viewer */}
+				<div className="h-3/5 md:h-auto md:flex-1 relative">
+					<AnnotatedViewer
+						ref={viewerRef}
+						imageUrl={story.imageSource.infoJsonUrl.replace(
+							/\/info\.json$/,
+							"",
+						)}
+						imageWidth={story.imageSource.width}
+						imageHeight={story.imageSource.height}
+						annotations={story.annotations}
+						onAnnotationUpdate={handleAnnotationUpdate}
+						onAnnotationSelect={setSelectedAnnotationId}
+						selectedAnnotationId={selectedAnnotationId}
+						showCrosshairs={showCrosshairs}
+						onToggleCrosshairs={() => setShowCrosshairs(!showCrosshairs)}
+					/>
+				</div>
+
+				{/* Sidebar - Bottom on mobile, left on desktop */}
 				<aside
-					className="w-80 border-r bg-white flex flex-col"
+					className="h-2/5 md:h-auto md:w-80 border-t md:border-t-0 md:border-l bg-white flex flex-col order-2 md:order-first"
 					aria-label={strings.editor.sidebarLabel}
 				>
-					<div className="p-4 border-b flex items-center justify-between">
+					<div className="p-2 md:p-4 border-b flex items-center justify-between">
 						<div className="flex items-center gap-2">
-							<h2 className="font-medium">
+							<h2 className="font-medium text-sm md:text-base">
 								{strings.editor.annotationsHeading}
 							</h2>
 							{saveStatus !== "idle" && (
@@ -137,7 +156,7 @@ const Editor = ({ story }: Props) => {
 						</Button>
 					</div>
 
-					<div className="flex-1 overflow-y-auto p-4">
+					<div className="flex-1 overflow-y-auto p-2 md:p-4">
 						{pendingData && (
 							<NewAnnotationForm
 								storyId={story.id}
@@ -155,25 +174,6 @@ const Editor = ({ story }: Props) => {
 						/>
 					</div>
 				</aside>
-
-				{/* Viewer */}
-				<div className="flex-1 relative">
-					<AnnotatedViewer
-						ref={viewerRef}
-						imageUrl={story.imageSource.infoJsonUrl.replace(
-							/\/info\.json$/,
-							"",
-						)}
-						imageWidth={story.imageSource.width}
-						imageHeight={story.imageSource.height}
-						annotations={story.annotations}
-						onAnnotationUpdate={handleAnnotationUpdate}
-						onAnnotationSelect={setSelectedAnnotationId}
-						selectedAnnotationId={selectedAnnotationId}
-						showCrosshairs={showCrosshairs}
-						onToggleCrosshairs={() => setShowCrosshairs(!showCrosshairs)}
-					/>
-				</div>
 			</div>
 
 			{showSettings && (

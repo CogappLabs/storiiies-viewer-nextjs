@@ -369,7 +369,7 @@ const CreateStoryForm = () => {
 					<label htmlFor="infoUrl" className="block text-sm font-medium mb-2">
 						{strings.createStoryForm.infoLabel}
 					</label>
-					<div className="flex gap-2">
+					<div className="flex flex-col sm:flex-row gap-2">
 						<input
 							type="url"
 							id="infoUrl"
@@ -379,7 +379,7 @@ const CreateStoryForm = () => {
 								resetImageState();
 							}}
 							placeholder={strings.createStoryForm.infoPlaceholder}
-							className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
+							className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cogapp-lavender"
 							required={sourceMode === "url"}
 						/>
 						<Button
