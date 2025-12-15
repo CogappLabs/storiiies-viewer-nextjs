@@ -18,7 +18,7 @@
 		"@samvera/clover-iiif": "^3.0.3",
 		"@vercel/blob": "^2.0.0",
 		"manifesto.js": "^4.3.0",
-		"next": "16.0.7",
+		"next": "^16.0.10",
 		"openseadragon": "^4.1.1",
 		"pg": "^8.16.3",
 		"prisma": "^6.19.0",
@@ -37,6 +37,8 @@
 		"eslint": "^9",
 		"eslint-config-next": "16.0.7",
 		"lefthook": "^2.0.8",
+		"node-addon-api": "^8.0.0",
+		"node-gyp": "^10.0.0",
 		"tailwindcss": "^4",
 		"typescript": "^5"
 	}
