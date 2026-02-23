@@ -2,15 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider   = "prisma-client"
-  output     = "../src/generated/prisma"
-  engineType = "client"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
 }
 
 enum ImageSourceType {
@@ -30,7 +27,7 @@ model ImageSource {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  story        Story?
+  stories      Story[]
 }
 
 model Story {
@@ -39,7 +36,7 @@ model Story {
   author        String?
   description   String?
   attribution   String?
-  imageSourceId String    @unique
+  imageSourceId String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -67,6 +64,7 @@ model Annotation {
 
   story  Story             @relation(fields: [storyId], references: [id], onDelete: Cascade)
   images AnnotationImage[]
+  audio  AnnotationAudio[]
 
   @@index([storyId])
   @@index([storyId, ordinal])
@@ -76,6 +74,19 @@ model AnnotationImage {
   id           String   @id @default(uuid())
   annotationId String
   imageUrl     String
+  ordinal      Int
+  createdAt    DateTime @default(now())
+
+  annotation Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+
+  @@index([annotationId])
+  @@index([annotationId, ordinal])
+}
+
+model AnnotationAudio {
+  id           String   @id @default(uuid())
+  annotationId String
+  audioUrl     String
   ordinal      Int
   createdAt    DateTime @default(now())
 

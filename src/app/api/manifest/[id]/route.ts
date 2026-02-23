@@ -2,141 +2,148 @@ import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-	const { id } = await params;
-	const host = request.headers.get("host") || "localhost:3000";
-	const protocol = request.headers.get("x-forwarded-proto") || "http";
-	const baseUrl = `${protocol}://${host}`;
+  const { id } = await params;
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  const baseUrl = `${protocol}://${host}`;
 
-	const story = await prisma.story.findUnique({
-		where: { id },
-		include: {
-			imageSource: true,
-			annotations: {
-				orderBy: { ordinal: "asc" },
-				include: {
-					images: { orderBy: { ordinal: "asc" } },
-				},
-			},
-		},
-	});
+  const story = await prisma.story.findUnique({
+    where: { id },
+    include: {
+      imageSource: true,
+      annotations: {
+        orderBy: { ordinal: "asc" },
+        include: {
+          images: { orderBy: { ordinal: "asc" } },
+          audio: { orderBy: { ordinal: "asc" } },
+        },
+      },
+    },
+  });
 
-	if (!story) {
-		return NextResponse.json({ error: "Story not found" }, { status: 404 });
-	}
+  if (!story) {
+    return NextResponse.json({ error: "Story not found" }, { status: 404 });
+  }
 
-	if (story.deletedAt) {
-		return NextResponse.json(
-			{ error: "This story has been deleted and is no longer available" },
-			{ status: 410 },
-		);
-	}
+  if (story.deletedAt) {
+    return NextResponse.json(
+      { error: "This story has been deleted and is no longer available" },
+      { status: 410 },
+    );
+  }
 
-	// Get image service URL (strip /info.json from the end)
-	const imageServiceUrl = story.imageSource.infoJsonUrl.replace(
-		/\/info\.json$/,
-		"",
-	);
+  // Get image service URL (strip /info.json from the end)
+  const imageServiceUrl = story.imageSource.infoJsonUrl.replace(
+    /\/info\.json$/,
+    "",
+  );
 
-	// Build IIIF Presentation API v3 manifest
-	const manifest = {
-		"@context": "http://iiif.io/api/presentation/3/context.json",
-		id: `${baseUrl}/api/manifest/${story.id}`,
-		type: "Manifest",
-		label: { en: [story.title] },
-		...(story.author && {
-			metadata: [{ label: { en: ["Author"] }, value: { en: [story.author] } }],
-		}),
-		...(story.description && { summary: { en: [story.description] } }),
-		...(story.attribution && {
-			requiredStatement: {
-				label: { en: ["Attribution"] },
-				value: { en: [story.attribution] },
-			},
-		}),
-		items: [
-			{
-				id: `${baseUrl}/api/manifest/${story.id}/canvas/1`,
-				type: "Canvas",
-				width: story.imageSource.width,
-				height: story.imageSource.height,
-				items: [
-					{
-						id: `${baseUrl}/api/manifest/${story.id}/canvas/1/page`,
-						type: "AnnotationPage",
-						items: [
-							{
-								id: `${baseUrl}/api/manifest/${story.id}/canvas/1/page/image`,
-								type: "Annotation",
-								motivation: "painting",
-								body: {
-									id: `${imageServiceUrl}/full/max/0/default.jpg`,
-									type: "Image",
-									format: "image/jpeg",
-									width: story.imageSource.width,
-									height: story.imageSource.height,
-									service: [
-										{
-											id: imageServiceUrl,
-											type: "ImageService3",
-											profile: "level1",
-										},
-									],
-								},
-								target: `${baseUrl}/api/manifest/${story.id}/canvas/1`,
-							},
-						],
-					},
-				],
-				annotations:
-					story.annotations.length > 0
-						? [
-								{
-									id: `${baseUrl}/api/manifest/${story.id}/canvas/1/annotations`,
-									type: "AnnotationPage",
-									items: story.annotations.map((annotation) => {
-										// Build the annotation body
-										const textBody = {
-											type: "TextualBody",
-											value: annotation.text,
-											language: "en",
-											format: "text/plain",
-										};
+  // Build IIIF Presentation API v3 manifest
+  const manifest = {
+    "@context": "http://iiif.io/api/presentation/3/context.json",
+    id: `${baseUrl}/api/manifest/${story.id}`,
+    type: "Manifest",
+    label: { en: [story.title] },
+    ...(story.author && {
+      metadata: [{ label: { en: ["Author"] }, value: { en: [story.author] } }],
+    }),
+    ...(story.description && { summary: { en: [story.description] } }),
+    ...(story.attribution && {
+      requiredStatement: {
+        label: { en: ["Attribution"] },
+        value: { en: [story.attribution] },
+      },
+    }),
+    items: [
+      {
+        id: `${baseUrl}/api/manifest/${story.id}/canvas/1`,
+        type: "Canvas",
+        width: story.imageSource.width,
+        height: story.imageSource.height,
+        items: [
+          {
+            id: `${baseUrl}/api/manifest/${story.id}/canvas/1/page`,
+            type: "AnnotationPage",
+            items: [
+              {
+                id: `${baseUrl}/api/manifest/${story.id}/canvas/1/page/image`,
+                type: "Annotation",
+                motivation: "painting",
+                body: {
+                  id: `${imageServiceUrl}/full/max/0/default.jpg`,
+                  type: "Image",
+                  format: "image/jpeg",
+                  width: story.imageSource.width,
+                  height: story.imageSource.height,
+                  service: [
+                    {
+                      id: imageServiceUrl,
+                      type: "ImageService3",
+                      profile: "level1",
+                    },
+                  ],
+                },
+                target: `${baseUrl}/api/manifest/${story.id}/canvas/1`,
+              },
+            ],
+          },
+        ],
+        annotations:
+          story.annotations.length > 0
+            ? [
+                {
+                  id: `${baseUrl}/api/manifest/${story.id}/canvas/1/annotations`,
+                  type: "AnnotationPage",
+                  items: story.annotations.map((annotation) => {
+                    // Build the annotation body
+                    const textBody = {
+                      type: "TextualBody",
+                      value: annotation.text,
+                      language: "en",
+                      format: "text/plain",
+                    };
 
-										// If there are images, body becomes an array
-										const imageBodies = annotation.images.map((img) => ({
-											type: "Image",
-											id: img.imageUrl,
-											format: "image/jpeg",
-										}));
+                    // If there are images or audio, body becomes an array
+                    const imageBodies = annotation.images.map((img) => ({
+                      type: "Image",
+                      id: img.imageUrl,
+                      format: "image/jpeg",
+                    }));
 
-										const body =
-											imageBodies.length > 0
-												? [textBody, ...imageBodies]
-												: textBody;
+                    const audioBodies = annotation.audio.map((aud) => ({
+                      type: "Sound",
+                      id: aud.audioUrl,
+                      format: "audio/mpeg",
+                    }));
 
-										return {
-											id: `${baseUrl}/api/manifest/${story.id}/canvas/1/annotations/${annotation.id}`,
-											type: "Annotation",
-											motivation: "commenting",
-											body,
-											target: `${baseUrl}/api/manifest/${story.id}/canvas/1#xywh=${Math.round(annotation.x)},${Math.round(annotation.y)},${Math.round(annotation.width)},${Math.round(annotation.height)}`,
-										};
-									}),
-								},
-							]
-						: undefined,
-			},
-		],
-	};
+                    const body =
+                      imageBodies.length > 0 || audioBodies.length > 0
+                        ? [textBody, ...imageBodies, ...audioBodies]
+                        : textBody;
 
-	return NextResponse.json(manifest, {
-		headers: {
-			"Content-Type":
-				'application/ld+json;profile="http://iiif.io/api/presentation/3/context.json"',
-			"Access-Control-Allow-Origin": "*",
-		},
-	});
+                    return {
+                      id: `${baseUrl}/api/manifest/${story.id}/canvas/1/annotations/${annotation.id}`,
+                      type: "Annotation",
+                      motivation: "commenting",
+                      body,
+                      target: `${baseUrl}/api/manifest/${story.id}/canvas/1#xywh=${Math.round(annotation.x)},${Math.round(annotation.y)},${Math.round(annotation.width)},${Math.round(annotation.height)}`,
+                    };
+                  }),
+                },
+              ]
+            : undefined,
+      },
+    ],
+  };
+
+  return NextResponse.json(manifest, {
+    headers: {
+      "Content-Type":
+        'application/ld+json;profile="http://iiif.io/api/presentation/3/context.json"',
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }

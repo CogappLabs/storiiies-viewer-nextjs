@@ -4,36 +4,36 @@ import { useRouter } from "next/navigation";
 import { useStrings } from "@/lib/i18n/LanguageProvider";
 
 interface DeleteImageButtonProps {
-	imageId: string;
+  imageId: string;
 }
 
 const DeleteImageButton = ({ imageId }: DeleteImageButtonProps) => {
-	const strings = useStrings();
-	const router = useRouter();
+  const strings = useStrings();
+  const router = useRouter();
 
-	const handleDelete = async () => {
-		if (confirm(strings.admin.deleteImageConfirm)) {
-			const response = await fetch(`/api/images/${imageId}`, {
-				method: "DELETE",
-			});
-			if (response.ok) {
-				router.refresh();
-			} else {
-				const data = await response.json();
-				alert(data.error || "Failed to delete image");
-			}
-		}
-	};
+  const handleDelete = async () => {
+    if (confirm(strings.admin.deleteImageConfirm)) {
+      const response = await fetch(`/api/images/${imageId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        router.refresh();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to delete image");
+      }
+    }
+  };
 
-	return (
-		<button
-			type="button"
-			onClick={handleDelete}
-			className="text-sm text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
-		>
-			{strings.admin.actionLabels.delete}
-		</button>
-	);
+  return (
+    <button
+      type="button"
+      onClick={handleDelete}
+      className="text-sm text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+    >
+      {strings.admin.actionLabels.delete}
+    </button>
+  );
 };
 
 export default DeleteImageButton;

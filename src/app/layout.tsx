@@ -4,30 +4,30 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 
 const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-	title: "Storiiies Editor | Cogapp",
-	description: "Create and edit IIIF stories with annotations",
+  title: "Storiiies Editor | Cogapp",
+  description: "Create and edit IIIF stories with annotations",
 };
 
 const RootLayout = ({
-	children,
+  children,
 }: Readonly<{
-	children: React.ReactNode;
+  children: React.ReactNode;
 }>) => (
-	<html lang="en">
-		<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-			<LanguageProvider>{children}</LanguageProvider>
-		</body>
-	</html>
+  <html lang="en">
+    <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <LanguageProvider>{children}</LanguageProvider>
+    </body>
+  </html>
 );
 
 export default RootLayout;

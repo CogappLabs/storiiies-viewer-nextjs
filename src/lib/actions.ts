@@ -3,584 +3,639 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type {
-	ImageSource,
-	ImageSourceType,
-	Story,
+  ImageSource,
+  ImageSourceType,
+  Story,
 } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidHttpUrl } from "@/lib/validation";
 
 type StoryWithImageSource = Story & { imageSource: ImageSource };
 type StoryWithCount = StoryWithImageSource & {
-	_count: { annotations: number };
+  _count: { annotations: number };
 };
 
 // Helper to safely get string from FormData
 const getString = (formData: FormData, key: string): string => {
-	const value = formData.get(key);
-	if (typeof value !== "string") {
-		throw new Error(`Missing or invalid field: ${key}`);
-	}
-	return value;
+  const value = formData.get(key);
+  if (typeof value !== "string") {
+    throw new Error(`Missing or invalid field: ${key}`);
+  }
+  return value;
 };
 
 const getOptionalString = (formData: FormData, key: string): string | null => {
-	const value = formData.get(key);
-	if (value === null || value === "") return null;
-	if (typeof value !== "string") return null;
-	return value;
+  const value = formData.get(key);
+  if (value === null || value === "") return null;
+  if (typeof value !== "string") return null;
+  return value;
 };
 
 const getPositiveInt = (formData: FormData, key: string): number => {
-	const value = formData.get(key);
-	if (typeof value !== "string") {
-		throw new Error(`Missing or invalid field: ${key}`);
-	}
-	const num = parseInt(value, 10);
-	if (Number.isNaN(num) || num <= 0) {
-		throw new Error(`${key} must be a positive number`);
-	}
-	return num;
+  const value = formData.get(key);
+  if (typeof value !== "string") {
+    throw new Error(`Missing or invalid field: ${key}`);
+  }
+  const num = parseInt(value, 10);
+  if (Number.isNaN(num) || num <= 0) {
+    throw new Error(`${key} must be a positive number`);
+  }
+  return num;
 };
 
 // Validate annotation coordinates
 const validateCoordinates = (coords: {
-	x?: number;
-	y?: number;
-	width?: number;
-	height?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 }): void => {
-	const { x, y, width, height } = coords;
+  const { x, y, width, height } = coords;
 
-	if (
-		x !== undefined &&
-		(typeof x !== "number" || !Number.isFinite(x) || x < 0)
-	) {
-		throw new Error("x coordinate must be a non-negative number");
-	}
-	if (
-		y !== undefined &&
-		(typeof y !== "number" || !Number.isFinite(y) || y < 0)
-	) {
-		throw new Error("y coordinate must be a non-negative number");
-	}
-	if (
-		width !== undefined &&
-		(typeof width !== "number" || !Number.isFinite(width) || width <= 0)
-	) {
-		throw new Error("width must be a positive number");
-	}
-	if (
-		height !== undefined &&
-		(typeof height !== "number" || !Number.isFinite(height) || height <= 0)
-	) {
-		throw new Error("height must be a positive number");
-	}
+  if (
+    x !== undefined &&
+    (typeof x !== "number" || !Number.isFinite(x) || x < 0)
+  ) {
+    throw new Error("x coordinate must be a non-negative number");
+  }
+  if (
+    y !== undefined &&
+    (typeof y !== "number" || !Number.isFinite(y) || y < 0)
+  ) {
+    throw new Error("y coordinate must be a non-negative number");
+  }
+  if (
+    width !== undefined &&
+    (typeof width !== "number" || !Number.isFinite(width) || width <= 0)
+  ) {
+    throw new Error("width must be a positive number");
+  }
+  if (
+    height !== undefined &&
+    (typeof height !== "number" || !Number.isFinite(height) || height <= 0)
+  ) {
+    throw new Error("height must be a positive number");
+  }
 };
 
 const NEXT_REDIRECT_MESSAGE = "NEXT_REDIRECT";
 
 const handleActionError = (scope: string, error: unknown): never => {
-	if (error instanceof Error && error.message === NEXT_REDIRECT_MESSAGE) {
-		throw error;
-	}
+  if (error instanceof Error && error.message === NEXT_REDIRECT_MESSAGE) {
+    throw error;
+  }
 
-	const fallback = `Failed to ${scope}`;
-	console.error(`${fallback}:`, error);
+  const fallback = `Failed to ${scope}`;
+  console.error(`${fallback}:`, error);
 
-	if (error instanceof Error) {
-		throw error;
-	}
+  if (error instanceof Error) {
+    throw error;
+  }
 
-	throw new Error(fallback);
+  throw new Error(fallback);
 };
 
 // Story actions
 export const createStory = async (formData: FormData) => {
-	try {
-		const title = getString(formData, "title");
-		if (!title.trim()) {
-			throw new Error("Title is required");
-		}
+  try {
+    const title = getString(formData, "title");
+    if (!title.trim()) {
+      throw new Error("Title is required");
+    }
 
-		const author = getOptionalString(formData, "author");
-		const description = getOptionalString(formData, "description");
-		const attribution = getOptionalString(formData, "attribution");
-		const infoJsonUrl = getString(formData, "imageUrl");
+    const author = getOptionalString(formData, "author");
+    const description = getOptionalString(formData, "description");
+    const attribution = getOptionalString(formData, "attribution");
+    const infoJsonUrl = getString(formData, "imageUrl");
 
-		if (!isValidHttpUrl(infoJsonUrl)) {
-			throw new Error("Invalid image URL");
-		}
+    if (!isValidHttpUrl(infoJsonUrl)) {
+      throw new Error("Invalid image URL");
+    }
 
-		const width = getPositiveInt(formData, "imageWidth");
-		const height = getPositiveInt(formData, "imageHeight");
+    const width = getPositiveInt(formData, "imageWidth");
+    const height = getPositiveInt(formData, "imageHeight");
 
-		// Get source type from form (defaults to 'url')
-		const sourceTypeValue = getOptionalString(formData, "sourceType");
-		const sourceType: ImageSourceType =
-			sourceTypeValue === "manifest"
-				? "manifest"
-				: sourceTypeValue === "upload"
-					? "upload"
-					: "url";
+    // Get source type from form (defaults to 'url')
+    const sourceTypeValue = getOptionalString(formData, "sourceType");
+    const sourceType: ImageSourceType =
+      sourceTypeValue === "manifest"
+        ? "manifest"
+        : sourceTypeValue === "upload"
+          ? "upload"
+          : "url";
 
-		const manifestUrl = getOptionalString(formData, "manifestUrl");
+    const manifestUrl = getOptionalString(formData, "manifestUrl");
 
-		// Create or find the ImageSource
-		const imageSource = await prisma.imageSource.upsert({
-			where: { infoJsonUrl },
-			update: {},
-			create: {
-				infoJsonUrl,
-				width,
-				height,
-				sourceType,
-				manifestUrl,
-			},
-		});
+    // Create or find the ImageSource
+    const imageSource = await prisma.imageSource.upsert({
+      where: { infoJsonUrl },
+      update: {},
+      create: {
+        infoJsonUrl,
+        width,
+        height,
+        sourceType,
+        manifestUrl,
+      },
+    });
 
-		const story = await prisma.story.create({
-			data: {
-				title: title.trim(),
-				author: author?.trim() || null,
-				description: description?.trim() || null,
-				attribution: attribution?.trim() || null,
-				imageSourceId: imageSource.id,
-			},
-		});
+    const story = await prisma.story.create({
+      data: {
+        title: title.trim(),
+        author: author?.trim() || null,
+        description: description?.trim() || null,
+        attribution: attribution?.trim() || null,
+        imageSourceId: imageSource.id,
+      },
+    });
 
-		redirect(`/editor/${story.id}`);
-	} catch (error) {
-		handleActionError("create story", error);
-	}
+    redirect(`/editor/${story.id}`);
+  } catch (error) {
+    handleActionError("create story", error);
+  }
 };
 
 export const updateStory = async (id: string, formData: FormData) => {
-	try {
-		if (!id) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!id) {
+      throw new Error("Story ID is required");
+    }
 
-		const title = getString(formData, "title");
-		if (!title.trim()) {
-			throw new Error("Title is required");
-		}
+    const title = getString(formData, "title");
+    if (!title.trim()) {
+      throw new Error("Title is required");
+    }
 
-		const author = getOptionalString(formData, "author");
-		const description = getOptionalString(formData, "description");
-		const attribution = getOptionalString(formData, "attribution");
+    const author = getOptionalString(formData, "author");
+    const description = getOptionalString(formData, "description");
+    const attribution = getOptionalString(formData, "attribution");
 
-		await prisma.story.update({
-			where: { id },
-			data: {
-				title: title.trim(),
-				author: author?.trim() || null,
-				description: description?.trim() || null,
-				attribution: attribution?.trim() || null,
-			},
-		});
+    await prisma.story.update({
+      where: { id },
+      data: {
+        title: title.trim(),
+        author: author?.trim() || null,
+        description: description?.trim() || null,
+        attribution: attribution?.trim() || null,
+      },
+    });
 
-		revalidatePath(`/editor/${id}`);
-	} catch (error) {
-		handleActionError("update story", error);
-	}
+    revalidatePath(`/editor/${id}`);
+  } catch (error) {
+    handleActionError("update story", error);
+  }
 };
 
 export const deleteStory = async (id: string) => {
-	try {
-		if (!id) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!id) {
+      throw new Error("Story ID is required");
+    }
 
-		await prisma.story.update({
-			where: { id },
-			data: { deletedAt: new Date() },
-		});
-		revalidatePath("/");
-		redirect("/");
-	} catch (error) {
-		handleActionError("delete story", error);
-	}
+    await prisma.story.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    revalidatePath("/");
+    redirect("/");
+  } catch (error) {
+    handleActionError("delete story", error);
+  }
 };
 
 export const restoreStory = async (id: string) => {
-	try {
-		if (!id) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!id) {
+      throw new Error("Story ID is required");
+    }
 
-		await prisma.story.update({
-			where: { id },
-			data: { deletedAt: null },
-		});
-		revalidatePath("/");
-		revalidatePath("/admin/storiiies");
-	} catch (error) {
-		handleActionError("restore story", error);
-	}
+    await prisma.story.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+    revalidatePath("/");
+    revalidatePath("/admin/storiiies");
+  } catch (error) {
+    handleActionError("restore story", error);
+  }
 };
 
 export const getStories = async (): Promise<StoryWithCount[]> => {
-	try {
-		return await prisma.story.findMany({
-			where: { deletedAt: null },
-			orderBy: { updatedAt: "desc" },
-			include: {
-				imageSource: true,
-				_count: { select: { annotations: true } },
-			},
-		});
-	} catch (error) {
-		handleActionError("fetch stories", error);
-		throw error;
-	}
+  try {
+    return await prisma.story.findMany({
+      where: { deletedAt: null },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        imageSource: true,
+        _count: { select: { annotations: true } },
+      },
+    });
+  } catch (error) {
+    handleActionError("fetch stories", error);
+    throw error;
+  }
 };
 
 export const getAllStories = async (): Promise<
-	(StoryWithCount & { deletedAt: Date | null })[]
+  (StoryWithCount & { deletedAt: Date | null })[]
 > => {
-	try {
-		return await prisma.story.findMany({
-			orderBy: [{ deletedAt: "desc" }, { updatedAt: "desc" }],
-			include: {
-				imageSource: true,
-				_count: { select: { annotations: true } },
-			},
-		});
-	} catch (error) {
-		handleActionError("fetch all stories", error);
-		throw error;
-	}
+  try {
+    return await prisma.story.findMany({
+      orderBy: [{ deletedAt: "desc" }, { updatedAt: "desc" }],
+      include: {
+        imageSource: true,
+        _count: { select: { annotations: true } },
+      },
+    });
+  } catch (error) {
+    handleActionError("fetch all stories", error);
+    throw error;
+  }
 };
 
 export const getStory = async (id: string) => {
-	try {
-		if (!id) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!id) {
+      throw new Error("Story ID is required");
+    }
 
-		return await prisma.story.findFirst({
-			where: { id, deletedAt: null },
-			include: {
-				imageSource: true,
-				annotations: {
-					orderBy: { ordinal: "asc" },
-					include: {
-						images: { orderBy: { ordinal: "asc" } },
-					},
-				},
-			},
-		});
-	} catch (error) {
-		handleActionError("fetch story", error);
-		throw error;
-	}
+    return await prisma.story.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        imageSource: true,
+        annotations: {
+          orderBy: { ordinal: "asc" },
+          include: {
+            images: { orderBy: { ordinal: "asc" } },
+            audio: { orderBy: { ordinal: "asc" } },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    handleActionError("fetch story", error);
+    throw error;
+  }
 };
 
 export const isStoryDeleted = async (id: string): Promise<boolean> => {
-	try {
-		if (!id) return false;
+  try {
+    if (!id) return false;
 
-		const story = await prisma.story.findUnique({
-			where: { id },
-			select: { deletedAt: true },
-		});
+    const story = await prisma.story.findUnique({
+      where: { id },
+      select: { deletedAt: true },
+    });
 
-		return story?.deletedAt !== null && story?.deletedAt !== undefined;
-	} catch {
-		return false;
-	}
+    return story?.deletedAt !== null && story?.deletedAt !== undefined;
+  } catch {
+    return false;
+  }
 };
 
 // Annotation actions
 export const createAnnotation = async (
-	storyId: string,
-	data: {
-		text: string;
-		x: number;
-		y: number;
-		width: number;
-		height: number;
-		viewportX?: number;
-		viewportY?: number;
-		viewportWidth?: number;
-		viewportHeight?: number;
-		imageUrls?: string[];
-	},
+  storyId: string,
+  data: {
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    viewportX?: number;
+    viewportY?: number;
+    viewportWidth?: number;
+    viewportHeight?: number;
+    imageUrls?: string[];
+    audioUrls?: string[];
+  },
 ) => {
-	try {
-		if (!storyId) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!storyId) {
+      throw new Error("Story ID is required");
+    }
 
-		// Validate coordinates
-		validateCoordinates({
-			x: data.x,
-			y: data.y,
-			width: data.width,
-			height: data.height,
-		});
+    // Validate coordinates
+    validateCoordinates({
+      x: data.x,
+      y: data.y,
+      width: data.width,
+      height: data.height,
+    });
 
-		// Also validate viewport coordinates if provided
-		if (
-			data.viewportX !== undefined ||
-			data.viewportY !== undefined ||
-			data.viewportWidth !== undefined ||
-			data.viewportHeight !== undefined
-		) {
-			validateCoordinates({
-				x: data.viewportX,
-				y: data.viewportY,
-				width: data.viewportWidth,
-				height: data.viewportHeight,
-			});
-		}
+    // Also validate viewport coordinates if provided
+    if (
+      data.viewportX !== undefined ||
+      data.viewportY !== undefined ||
+      data.viewportWidth !== undefined ||
+      data.viewportHeight !== undefined
+    ) {
+      validateCoordinates({
+        x: data.viewportX,
+        y: data.viewportY,
+        width: data.viewportWidth,
+        height: data.viewportHeight,
+      });
+    }
 
-		// Validate image URLs if provided
-		const validImageUrls = data.imageUrls?.filter((url) => {
-			if (!url.trim()) return false;
-			return isValidHttpUrl(url);
-		});
+    // Validate image URLs if provided
+    const validImageUrls = data.imageUrls?.filter((url) => {
+      if (!url.trim()) return false;
+      return isValidHttpUrl(url);
+    });
 
-		const maxOrdinal = await prisma.annotation.aggregate({
-			where: { storyId },
-			_max: { ordinal: true },
-		});
+    // Validate audio URLs if provided
+    const validAudioUrls = data.audioUrls?.filter((url) => {
+      if (!url.trim()) return false;
+      return isValidHttpUrl(url);
+    });
 
-		const annotation = await prisma.annotation.create({
-			data: {
-				storyId,
-				text: data.text,
-				x: data.x,
-				y: data.y,
-				width: data.width,
-				height: data.height,
-				viewportX: data.viewportX,
-				viewportY: data.viewportY,
-				viewportWidth: data.viewportWidth,
-				viewportHeight: data.viewportHeight,
-				ordinal: (maxOrdinal._max.ordinal ?? -1) + 1,
-				images: validImageUrls?.length
-					? {
-							create: validImageUrls.map((url, index) => ({
-								imageUrl: url,
-								ordinal: index,
-							})),
-						}
-					: undefined,
-			},
-			include: {
-				images: { orderBy: { ordinal: "asc" } },
-			},
-		});
+    const maxOrdinal = await prisma.annotation.aggregate({
+      where: { storyId },
+      _max: { ordinal: true },
+    });
 
-		revalidatePath(`/editor/${storyId}`);
-		return annotation;
-	} catch (error) {
-		handleActionError("create annotation", error);
-	}
+    const annotation = await prisma.annotation.create({
+      data: {
+        storyId,
+        text: data.text,
+        x: data.x,
+        y: data.y,
+        width: data.width,
+        height: data.height,
+        viewportX: data.viewportX,
+        viewportY: data.viewportY,
+        viewportWidth: data.viewportWidth,
+        viewportHeight: data.viewportHeight,
+        ordinal: (maxOrdinal._max.ordinal ?? -1) + 1,
+        images: validImageUrls?.length
+          ? {
+              create: validImageUrls.map((url, index) => ({
+                imageUrl: url,
+                ordinal: index,
+              })),
+            }
+          : undefined,
+        audio: validAudioUrls?.length
+          ? {
+              create: validAudioUrls.map((url, index) => ({
+                audioUrl: url,
+                ordinal: index,
+              })),
+            }
+          : undefined,
+      },
+      include: {
+        images: { orderBy: { ordinal: "asc" } },
+        audio: { orderBy: { ordinal: "asc" } },
+      },
+    });
+
+    revalidatePath(`/editor/${storyId}`);
+    return annotation;
+  } catch (error) {
+    handleActionError("create annotation", error);
+  }
 };
 
 export const updateAnnotation = async (
-	id: string,
-	storyId: string,
-	data: {
-		text?: string;
-		x?: number;
-		y?: number;
-		width?: number;
-		height?: number;
-	},
+  id: string,
+  storyId: string,
+  data: {
+    text?: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  },
 ) => {
-	try {
-		if (!id || !storyId) {
-			throw new Error("Annotation ID and Story ID are required");
-		}
+  try {
+    if (!id || !storyId) {
+      throw new Error("Annotation ID and Story ID are required");
+    }
 
-		// Validate coordinates if provided
-		validateCoordinates({
-			x: data.x,
-			y: data.y,
-			width: data.width,
-			height: data.height,
-		});
+    // Validate coordinates if provided
+    validateCoordinates({
+      x: data.x,
+      y: data.y,
+      width: data.width,
+      height: data.height,
+    });
 
-		const annotation = await prisma.annotation.update({
-			where: { id },
-			data,
-		});
+    const annotation = await prisma.annotation.update({
+      where: { id },
+      data,
+    });
 
-		revalidatePath(`/editor/${storyId}`);
-		return annotation;
-	} catch (error) {
-		handleActionError("update annotation", error);
-	}
+    revalidatePath(`/editor/${storyId}`);
+    return annotation;
+  } catch (error) {
+    handleActionError("update annotation", error);
+  }
 };
 
 export const deleteAnnotation = async (id: string, storyId: string) => {
-	try {
-		if (!id || !storyId) {
-			throw new Error("Annotation ID and Story ID are required");
-		}
+  try {
+    if (!id || !storyId) {
+      throw new Error("Annotation ID and Story ID are required");
+    }
 
-		await prisma.annotation.delete({ where: { id } });
-		revalidatePath(`/editor/${storyId}`);
-	} catch (error) {
-		handleActionError("delete annotation", error);
-	}
+    await prisma.annotation.delete({ where: { id } });
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("delete annotation", error);
+  }
 };
 
 export const reorderAnnotations = async (
-	storyId: string,
-	annotationIds: string[],
+  storyId: string,
+  annotationIds: string[],
 ) => {
-	try {
-		if (!storyId) {
-			throw new Error("Story ID is required");
-		}
+  try {
+    if (!storyId) {
+      throw new Error("Story ID is required");
+    }
 
-		if (!Array.isArray(annotationIds) || annotationIds.length === 0) {
-			throw new Error("Annotation IDs are required");
-		}
+    if (!Array.isArray(annotationIds) || annotationIds.length === 0) {
+      throw new Error("Annotation IDs are required");
+    }
 
-		await prisma.$transaction(
-			annotationIds.map((id, index) =>
-				prisma.annotation.update({
-					where: { id },
-					data: { ordinal: index },
-				}),
-			),
-		);
+    await prisma.$transaction(
+      annotationIds.map((id, index) =>
+        prisma.annotation.update({
+          where: { id },
+          data: { ordinal: index },
+        }),
+      ),
+    );
 
-		revalidatePath(`/editor/${storyId}`);
-	} catch (error) {
-		handleActionError("reorder annotations", error);
-	}
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("reorder annotations", error);
+  }
 };
 
 // Annotation Image actions
 export const addAnnotationImage = async (
-	annotationId: string,
-	storyId: string,
-	imageUrl: string,
+  annotationId: string,
+  storyId: string,
+  imageUrl: string,
 ) => {
-	try {
-		if (!annotationId || !storyId) {
-			throw new Error("Annotation ID and Story ID are required");
-		}
+  try {
+    if (!annotationId || !storyId) {
+      throw new Error("Annotation ID and Story ID are required");
+    }
 
-		if (!imageUrl || !isValidHttpUrl(imageUrl)) {
-			throw new Error("Valid image URL is required");
-		}
+    if (!imageUrl || !isValidHttpUrl(imageUrl)) {
+      throw new Error("Valid image URL is required");
+    }
 
-		const maxOrdinal = await prisma.annotationImage.aggregate({
-			where: { annotationId },
-			_max: { ordinal: true },
-		});
+    const maxOrdinal = await prisma.annotationImage.aggregate({
+      where: { annotationId },
+      _max: { ordinal: true },
+    });
 
-		await prisma.annotationImage.create({
-			data: {
-				annotationId,
-				imageUrl,
-				ordinal: (maxOrdinal._max.ordinal ?? -1) + 1,
-			},
-		});
+    await prisma.annotationImage.create({
+      data: {
+        annotationId,
+        imageUrl,
+        ordinal: (maxOrdinal._max.ordinal ?? -1) + 1,
+      },
+    });
 
-		revalidatePath(`/editor/${storyId}`);
-	} catch (error) {
-		handleActionError("add annotation image", error);
-	}
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("add annotation image", error);
+  }
 };
 
 export const removeAnnotationImage = async (
-	imageId: string,
-	storyId: string,
+  imageId: string,
+  storyId: string,
 ) => {
-	try {
-		if (!imageId || !storyId) {
-			throw new Error("Image ID and Story ID are required");
-		}
+  try {
+    if (!imageId || !storyId) {
+      throw new Error("Image ID and Story ID are required");
+    }
 
-		await prisma.annotationImage.delete({ where: { id: imageId } });
-		revalidatePath(`/editor/${storyId}`);
-	} catch (error) {
-		handleActionError("remove annotation image", error);
-	}
+    await prisma.annotationImage.delete({ where: { id: imageId } });
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("remove annotation image", error);
+  }
 };
 
 export const updateAnnotationImages = async (
-	annotationId: string,
-	storyId: string,
-	imageUrls: string[],
+  annotationId: string,
+  storyId: string,
+  imageUrls: string[],
 ) => {
-	try {
-		if (!annotationId || !storyId) {
-			throw new Error("Annotation ID and Story ID are required");
-		}
+  try {
+    if (!annotationId || !storyId) {
+      throw new Error("Annotation ID and Story ID are required");
+    }
 
-		// Filter and validate URLs
-		const validUrls = imageUrls.filter(
-			(url) => url.trim() && isValidHttpUrl(url),
-		);
+    // Filter and validate URLs
+    const validUrls = imageUrls.filter(
+      (url) => url.trim() && isValidHttpUrl(url),
+    );
 
-		// Delete all existing images and recreate with new order
-		await prisma.$transaction([
-			prisma.annotationImage.deleteMany({ where: { annotationId } }),
-			...validUrls.map((url, index) =>
-				prisma.annotationImage.create({
-					data: {
-						annotationId,
-						imageUrl: url,
-						ordinal: index,
-					},
-				}),
-			),
-		]);
+    // Delete all existing images and recreate with new order
+    await prisma.$transaction([
+      prisma.annotationImage.deleteMany({ where: { annotationId } }),
+      ...validUrls.map((url, index) =>
+        prisma.annotationImage.create({
+          data: {
+            annotationId,
+            imageUrl: url,
+            ordinal: index,
+          },
+        }),
+      ),
+    ]);
 
-		revalidatePath(`/editor/${storyId}`);
-	} catch (error) {
-		handleActionError("update annotation images", error);
-	}
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("update annotation images", error);
+  }
+};
+
+// Annotation Audio actions
+export const updateAnnotationAudio = async (
+  annotationId: string,
+  storyId: string,
+  audioUrls: string[],
+) => {
+  try {
+    if (!annotationId || !storyId) {
+      throw new Error("Annotation ID and Story ID are required");
+    }
+
+    // Filter and validate URLs
+    const validUrls = audioUrls.filter(
+      (url) => url.trim() && isValidHttpUrl(url),
+    );
+
+    // Delete all existing audio and recreate with new order
+    await prisma.$transaction([
+      prisma.annotationAudio.deleteMany({ where: { annotationId } }),
+      ...validUrls.map((url, index) =>
+        prisma.annotationAudio.create({
+          data: {
+            annotationId,
+            audioUrl: url,
+            ordinal: index,
+          },
+        }),
+      ),
+    ]);
+
+    revalidatePath(`/editor/${storyId}`);
+  } catch (error) {
+    handleActionError("update annotation audio", error);
+  }
 };
 
 // ImageSource actions
-export type ImageSourceWithStory = ImageSource & {
-	story: { id: string; title: string; deletedAt: Date | null } | null;
+export type ImageSourceWithStories = ImageSource & {
+  stories: { id: string; title: string; deletedAt: Date | null }[];
 };
 
-export const getImageSources = async (): Promise<ImageSourceWithStory[]> => {
-	try {
-		const imageSources = await prisma.imageSource.findMany({
-			orderBy: { createdAt: "desc" },
-			include: {
-				story: {
-					select: { id: true, title: true, deletedAt: true },
-				},
-			},
-		});
+export const getImageSources = async (): Promise<ImageSourceWithStories[]> => {
+  try {
+    const imageSources = await prisma.imageSource.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        stories: {
+          select: { id: true, title: true, deletedAt: true },
+        },
+      },
+    });
 
-		return imageSources;
-	} catch (error) {
-		handleActionError("fetch image sources", error);
-		throw error;
-	}
+    return imageSources;
+  } catch (error) {
+    handleActionError("fetch image sources", error);
+    throw error;
+  }
 };
 
-export const getUploadedImages = async (): Promise<ImageSourceWithStory[]> => {
-	try {
-		const imageSources = await prisma.imageSource.findMany({
-			where: { sourceType: "upload" },
-			orderBy: { createdAt: "desc" },
-			include: {
-				story: {
-					select: { id: true, title: true, deletedAt: true },
-				},
-			},
-		});
+export const getUploadedImages = async (): Promise<
+  ImageSourceWithStories[]
+> => {
+  try {
+    const imageSources = await prisma.imageSource.findMany({
+      where: { sourceType: "upload" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        stories: {
+          select: { id: true, title: true, deletedAt: true },
+        },
+      },
+    });
 
-		return imageSources;
-	} catch (error) {
-		handleActionError("fetch uploaded images", error);
-		throw error;
-	}
+    return imageSources;
+  } catch (error) {
+    handleActionError("fetch uploaded images", error);
+    throw error;
+  }
 };

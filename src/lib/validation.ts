@@ -1,11 +1,11 @@
 // Validate URL format (HTTP/HTTPS only)
 export const isValidHttpUrl = (url: string): boolean => {
-	try {
-		const parsed = new URL(url);
-		return parsed.protocol === "https:" || parsed.protocol === "http:";
-	} catch {
-		return false;
-	}
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
 };
 
 // File upload limits

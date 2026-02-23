@@ -2,12 +2,12 @@
 
 import OpenSeadragon from "openseadragon";
 import {
-	forwardRef,
-	useCallback,
-	useEffect,
-	useImperativeHandle,
-	useRef,
-	useState,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
 } from "react";
 import type { Annotation } from "@/generated/prisma/client";
 import { VIEWER_CONFIG } from "@/lib/config";
@@ -16,579 +16,579 @@ import { useStrings } from "@/lib/i18n/LanguageProvider";
 // Store viewer instances outside React to prevent HMR serialization issues
 // (Turbopack tries to serialize component state, causing "Max payload size exceeded")
 const viewerInstances = new WeakMap<
-	HTMLDivElement,
-	{
-		viewer: OpenSeadragon.Viewer;
-		anno: AnnotoriousInstance | null;
-	}
+  HTMLDivElement,
+  {
+    viewer: OpenSeadragon.Viewer;
+    anno: AnnotoriousInstance | null;
+  }
 >();
 
 // Annotorious types
 interface W3CAnnotation {
-	"@context": string;
-	id: string;
-	type: string;
-	body: { type: string; value: string; purpose: string }[];
-	target: {
-		source: string;
-		selector: {
-			type: string;
-			conformsTo: string;
-			value: string;
-		};
-	};
+  "@context": string;
+  id: string;
+  type: string;
+  body: { type: string; value: string; purpose: string }[];
+  target: {
+    source: string;
+    selector: {
+      type: string;
+      conformsTo: string;
+      value: string;
+    };
+  };
 }
 
 interface AnnotoriousInstance {
-	on: (event: string, callback: (annotation: W3CAnnotation) => void) => void;
-	off: (event: string, callback: (annotation: W3CAnnotation) => void) => void;
-	addAnnotation: (annotation: W3CAnnotation) => void;
-	removeAnnotation: (annotation: W3CAnnotation | string) => void;
-	setAnnotations: (annotations: W3CAnnotation[]) => void;
-	getAnnotations: () => W3CAnnotation[];
-	selectAnnotation: (annotation: W3CAnnotation | string) => void;
-	cancelSelected: () => void;
-	fitBounds: (
-		annotation: W3CAnnotation | string,
-		immediately?: boolean,
-	) => void;
-	setDrawingEnabled: (enabled: boolean) => void;
-	destroy: () => void;
+  on: (event: string, callback: (annotation: W3CAnnotation) => void) => void;
+  off: (event: string, callback: (annotation: W3CAnnotation) => void) => void;
+  addAnnotation: (annotation: W3CAnnotation) => void;
+  removeAnnotation: (annotation: W3CAnnotation | string) => void;
+  setAnnotations: (annotations: W3CAnnotation[]) => void;
+  getAnnotations: () => W3CAnnotation[];
+  selectAnnotation: (annotation: W3CAnnotation | string) => void;
+  cancelSelected: () => void;
+  fitBounds: (
+    annotation: W3CAnnotation | string,
+    immediately?: boolean,
+  ) => void;
+  setDrawingEnabled: (enabled: boolean) => void;
+  destroy: () => void;
 }
 
 interface ViewportBounds {
-	x: number;
-	y: number;
-	width: number;
-	height: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface AnnotationData {
-	rect: ViewportBounds;
-	viewport: ViewportBounds;
+  rect: ViewportBounds;
+  viewport: ViewportBounds;
 }
 
 interface Props {
-	imageUrl: string;
-	imageWidth: number;
-	imageHeight: number;
-	annotations: Annotation[];
-	onAnnotationUpdate?: (
-		id: string,
-		coords: { x: number; y: number; width: number; height: number },
-	) => void;
-	onAnnotationDelete?: (id: string) => void;
-	onAnnotationSelect?: (id: string | null) => void;
-	selectedAnnotationId?: string | null;
-	showCrosshairs?: boolean;
-	onToggleCrosshairs?: () => void;
+  imageUrl: string;
+  imageWidth: number;
+  imageHeight: number;
+  annotations: Annotation[];
+  onAnnotationUpdate?: (
+    id: string,
+    coords: { x: number; y: number; width: number; height: number },
+  ) => void;
+  onAnnotationDelete?: (id: string) => void;
+  onAnnotationSelect?: (id: string | null) => void;
+  selectedAnnotationId?: string | null;
+  showCrosshairs?: boolean;
+  onToggleCrosshairs?: () => void;
 }
 
 // Expose methods via ref
 export interface AnnotatedViewerHandle {
-	getViewportBounds: () => AnnotationData | null;
+  getViewportBounds: () => AnnotationData | null;
 }
 
 // Parse xywh fragment from W3C annotation
 const parseFragment = (
-	value: string,
+  value: string,
 ): { x: number; y: number; width: number; height: number } | null => {
-	const match = value.match(
-		/xywh=pixel:([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+)/,
-	);
-	if (!match) return null;
-	return {
-		x: parseFloat(match[1]),
-		y: parseFloat(match[2]),
-		width: parseFloat(match[3]),
-		height: parseFloat(match[4]),
-	};
+  const match = value.match(
+    /xywh=pixel:([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+)/,
+  );
+  if (!match) return null;
+  return {
+    x: parseFloat(match[1]),
+    y: parseFloat(match[2]),
+    width: parseFloat(match[3]),
+    height: parseFloat(match[4]),
+  };
 };
 
 // Convert our annotation to W3C format
 const toW3C = (annotation: Annotation, imageUrl: string): W3CAnnotation => ({
-	"@context": "http://www.w3.org/ns/anno.jsonld",
-	id: annotation.id,
-	type: "Annotation",
-	body: [
-		{ type: "TextualBody", value: annotation.text, purpose: "commenting" },
-	],
-	target: {
-		source: imageUrl,
-		selector: {
-			type: "FragmentSelector",
-			conformsTo: "http://www.w3.org/TR/media-frags/",
-			value: `xywh=pixel:${annotation.x},${annotation.y},${annotation.width},${annotation.height}`,
-		},
-	},
+  "@context": "http://www.w3.org/ns/anno.jsonld",
+  id: annotation.id,
+  type: "Annotation",
+  body: [
+    { type: "TextualBody", value: annotation.text, purpose: "commenting" },
+  ],
+  target: {
+    source: imageUrl,
+    selector: {
+      type: "FragmentSelector",
+      conformsTo: "http://www.w3.org/TR/media-frags/",
+      value: `xywh=pixel:${annotation.x},${annotation.y},${annotation.width},${annotation.height}`,
+    },
+  },
 });
 
 const AnnotatedViewer = forwardRef<AnnotatedViewerHandle, Props>(
-	(
-		{
-			imageUrl,
-			imageWidth,
-			imageHeight,
-			annotations,
-			onAnnotationUpdate,
-			onAnnotationDelete,
-			onAnnotationSelect,
-			selectedAnnotationId,
-			showCrosshairs = false,
-			onToggleCrosshairs,
-		},
-		ref,
-	) => {
-		const strings = useStrings();
-		const containerRef = useRef<HTMLDivElement>(null);
-		const [isReady, setIsReady] = useState(false);
+  (
+    {
+      imageUrl,
+      imageWidth,
+      imageHeight,
+      annotations,
+      onAnnotationUpdate,
+      onAnnotationDelete,
+      onAnnotationSelect,
+      selectedAnnotationId,
+      showCrosshairs = false,
+      onToggleCrosshairs,
+    },
+    ref,
+  ) => {
+    const strings = useStrings();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isReady, setIsReady] = useState(false);
 
-		// Helper to get viewer from WeakMap (avoids storing in refs which can be serialized)
-		const getInstances = useCallback(() => {
-			if (!containerRef.current) return null;
-			return viewerInstances.get(containerRef.current) ?? null;
-		}, []);
+    // Helper to get viewer from WeakMap (avoids storing in refs which can be serialized)
+    const getInstances = useCallback(() => {
+      if (!containerRef.current) return null;
+      return viewerInstances.get(containerRef.current) ?? null;
+    }, []);
 
-		// Expose getViewportBounds method via ref
-		useImperativeHandle(ref, () => ({
-			getViewportBounds: (): AnnotationData | null => {
-				const instances = getInstances();
-				if (!instances?.viewer) return null;
-				const viewer = instances.viewer;
+    // Expose getViewportBounds method via ref
+    useImperativeHandle(ref, () => ({
+      getViewportBounds: (): AnnotationData | null => {
+        const instances = getInstances();
+        if (!instances?.viewer) return null;
+        const viewer = instances.viewer;
 
-				// If at or near minimum zoom, return full image bounds
-				// (viewport calculations are unreliable with letterboxing)
-				const zoom = viewer.viewport.getZoom();
-				const minZoom = viewer.viewport.getMinZoom();
-				if (zoom <= minZoom * 1.05) {
-					return {
-						rect: { x: 0, y: 0, width: imageWidth, height: imageHeight },
-						viewport: { x: 0, y: 0, width: imageWidth, height: imageHeight },
-					};
-				}
+        // If at or near minimum zoom, return full image bounds
+        // (viewport calculations are unreliable with letterboxing)
+        const zoom = viewer.viewport.getZoom();
+        const minZoom = viewer.viewport.getMinZoom();
+        if (zoom <= minZoom * 1.05) {
+          return {
+            rect: { x: 0, y: 0, width: imageWidth, height: imageHeight },
+            viewport: { x: 0, y: 0, width: imageWidth, height: imageHeight },
+          };
+        }
 
-				const viewportRect = viewer.viewport.getBounds();
-				const imageRect =
-					viewer.viewport.viewportToImageRectangle(viewportRect);
+        const viewportRect = viewer.viewport.getBounds();
+        const imageRect =
+          viewer.viewport.viewportToImageRectangle(viewportRect);
 
-				// Clamp to image bounds
-				const x = Math.round(Math.max(0, imageRect.x));
-				const y = Math.round(Math.max(0, imageRect.y));
-				const width = Math.round(Math.min(imageRect.width, imageWidth - x));
-				const height = Math.round(Math.min(imageRect.height, imageHeight - y));
+        // Clamp to image bounds
+        const x = Math.round(Math.max(0, imageRect.x));
+        const y = Math.round(Math.max(0, imageRect.y));
+        const width = Math.round(Math.min(imageRect.width, imageWidth - x));
+        const height = Math.round(Math.min(imageRect.height, imageHeight - y));
 
-				return {
-					rect: { x, y, width, height },
-					viewport: { x, y, width, height },
-				};
-			},
-		}));
+        return {
+          rect: { x, y, width, height },
+          viewport: { x, y, width, height },
+        };
+      },
+    }));
 
-		// Initialize OpenSeadragon and Annotorious
-		useEffect(() => {
-			if (!containerRef.current) return;
+    // Initialize OpenSeadragon and Annotorious
+    useEffect(() => {
+      if (!containerRef.current) return;
 
-			let isDisposed = false;
-			let crosshairObserver: MutationObserver | null = null;
-			let initialCrosshairTimeout: number | null = null;
+      let isDisposed = false;
+      let crosshairObserver: MutationObserver | null = null;
+      let initialCrosshairTimeout: number | null = null;
 
-			const cleanupCrosshairEffects = () => {
-				if (crosshairObserver) {
-					crosshairObserver.disconnect();
-					crosshairObserver = null;
-				}
-				if (initialCrosshairTimeout) {
-					clearTimeout(initialCrosshairTimeout);
-					initialCrosshairTimeout = null;
-				}
-			};
+      const cleanupCrosshairEffects = () => {
+        if (crosshairObserver) {
+          crosshairObserver.disconnect();
+          crosshairObserver = null;
+        }
+        if (initialCrosshairTimeout) {
+          clearTimeout(initialCrosshairTimeout);
+          initialCrosshairTimeout = null;
+        }
+      };
 
-			const container = containerRef.current;
-			const viewer = OpenSeadragon({
-				element: container,
-				tileSources: `${imageUrl}/info.json`,
-				showNavigationControl: false,
-				gestureSettingsMouse: { clickToZoom: false },
-			});
+      const container = containerRef.current;
+      const viewer = OpenSeadragon({
+        element: container,
+        tileSources: `${imageUrl}/info.json`,
+        showNavigationControl: false,
+        gestureSettingsMouse: { clickToZoom: false },
+      });
 
-			// Store in WeakMap (outside React) to prevent HMR serialization issues
-			viewerInstances.set(container, { viewer, anno: null });
+      // Store in WeakMap (outside React) to prevent HMR serialization issues
+      viewerInstances.set(container, { viewer, anno: null });
 
-			// Wait for OpenSeadragon to be ready before initializing Annotorious
-			viewer.addHandler("open", () => {
-				const initAnnotorious = async () => {
-					const Annotorious = await import(
-						"@recogito/annotorious-openseadragon"
-					);
-					await import(
-						"@recogito/annotorious-openseadragon/dist/annotorious.min.css"
-					);
+      // Wait for OpenSeadragon to be ready before initializing Annotorious
+      viewer.addHandler("open", () => {
+        const initAnnotorious = async () => {
+          const Annotorious = await import(
+            "@recogito/annotorious-openseadragon"
+          );
+          await import(
+            "@recogito/annotorious-openseadragon/dist/annotorious.min.css"
+          );
 
-					if (isDisposed) return;
+          if (isDisposed) return;
 
-					const anno = Annotorious.default(viewer, {
-						allowEmpty: false,
-						disableEditor: true, // We'll use our own editor
-						fragmentUnit: "pixel",
-					}) as AnnotoriousInstance;
+          const anno = Annotorious.default(viewer, {
+            allowEmpty: false,
+            disableEditor: true, // We'll use our own editor
+            fragmentUnit: "pixel",
+          }) as AnnotoriousInstance;
 
-					if (isDisposed) {
-						anno.destroy();
-						return;
-					}
+          if (isDisposed) {
+            anno.destroy();
+            return;
+          }
 
-					// Update WeakMap with anno instance
-					viewerInstances.set(container, { viewer, anno });
+          // Update WeakMap with anno instance
+          viewerInstances.set(container, { viewer, anno });
 
-					// Function to add or update crosshairs on an annotation/selection element
-					const updateCrosshairs = (shapeGroup: Element) => {
-						const inner = shapeGroup.querySelector(
-							".a9s-inner",
-						) as SVGRectElement;
-						if (!inner) return;
+          // Function to add or update crosshairs on an annotation/selection element
+          const updateCrosshairs = (shapeGroup: Element) => {
+            const inner = shapeGroup.querySelector(
+              ".a9s-inner",
+            ) as SVGRectElement;
+            if (!inner) return;
 
-						const x = parseFloat(inner.getAttribute("x") || "0");
-						const y = parseFloat(inner.getAttribute("y") || "0");
-						const width = parseFloat(inner.getAttribute("width") || "0");
-						const height = parseFloat(inner.getAttribute("height") || "0");
+            const x = parseFloat(inner.getAttribute("x") || "0");
+            const y = parseFloat(inner.getAttribute("y") || "0");
+            const width = parseFloat(inner.getAttribute("width") || "0");
+            const height = parseFloat(inner.getAttribute("height") || "0");
 
-						if (
-							width < VIEWER_CONFIG.crosshair.minDimension ||
-							height < VIEWER_CONFIG.crosshair.minDimension
-						) {
-							return;
-						}
+            if (
+              width < VIEWER_CONFIG.crosshair.minDimension ||
+              height < VIEWER_CONFIG.crosshair.minDimension
+            ) {
+              return;
+            }
 
-						// Center is at x + width/2, y + height/2
-						const centerX = x + width / 2;
-						const centerY = y + height / 2;
-						const size =
-							Math.min(width, height) * VIEWER_CONFIG.crosshair.sizeRatio;
+            // Center is at x + width/2, y + height/2
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            const size =
+              Math.min(width, height) * VIEWER_CONFIG.crosshair.sizeRatio;
 
-						let group = shapeGroup.querySelector(
-							".crosshair-group",
-						) as SVGGElement;
+            let group = shapeGroup.querySelector(
+              ".crosshair-group",
+            ) as SVGGElement;
 
-						if (!group) {
-							// Create new crosshair group
-							group = document.createElementNS(
-								"http://www.w3.org/2000/svg",
-								"g",
-							);
-							group.setAttribute("class", "crosshair-group");
+            if (!group) {
+              // Create new crosshair group
+              group = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "g",
+              );
+              group.setAttribute("class", "crosshair-group");
 
-							const hLine = document.createElementNS(
-								"http://www.w3.org/2000/svg",
-								"line",
-							);
-							hLine.setAttribute("class", "crosshair-h");
-							hLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
-							hLine.setAttribute(
-								"stroke-width",
-								String(VIEWER_CONFIG.crosshair.strokeWidth),
-							);
-							hLine.setAttribute("vector-effect", "non-scaling-stroke");
+              const hLine = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "line",
+              );
+              hLine.setAttribute("class", "crosshair-h");
+              hLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
+              hLine.setAttribute(
+                "stroke-width",
+                String(VIEWER_CONFIG.crosshair.strokeWidth),
+              );
+              hLine.setAttribute("vector-effect", "non-scaling-stroke");
 
-							const vLine = document.createElementNS(
-								"http://www.w3.org/2000/svg",
-								"line",
-							);
-							vLine.setAttribute("class", "crosshair-v");
-							vLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
-							vLine.setAttribute(
-								"stroke-width",
-								String(VIEWER_CONFIG.crosshair.strokeWidth),
-							);
-							vLine.setAttribute("vector-effect", "non-scaling-stroke");
+              const vLine = document.createElementNS(
+                "http://www.w3.org/2000/svg",
+                "line",
+              );
+              vLine.setAttribute("class", "crosshair-v");
+              vLine.setAttribute("stroke", VIEWER_CONFIG.crosshair.strokeColor);
+              vLine.setAttribute(
+                "stroke-width",
+                String(VIEWER_CONFIG.crosshair.strokeWidth),
+              );
+              vLine.setAttribute("vector-effect", "non-scaling-stroke");
 
-							group.appendChild(hLine);
-							group.appendChild(vLine);
-							shapeGroup.appendChild(group);
-						}
+              group.appendChild(hLine);
+              group.appendChild(vLine);
+              shapeGroup.appendChild(group);
+            }
 
-						// Update line positions
-						const hLine = group.querySelector(".crosshair-h") as SVGLineElement;
-						const vLine = group.querySelector(".crosshair-v") as SVGLineElement;
+            // Update line positions
+            const hLine = group.querySelector(".crosshair-h") as SVGLineElement;
+            const vLine = group.querySelector(".crosshair-v") as SVGLineElement;
 
-						if (hLine) {
-							hLine.setAttribute("x1", String(centerX - size));
-							hLine.setAttribute("y1", String(centerY));
-							hLine.setAttribute("x2", String(centerX + size));
-							hLine.setAttribute("y2", String(centerY));
-						}
+            if (hLine) {
+              hLine.setAttribute("x1", String(centerX - size));
+              hLine.setAttribute("y1", String(centerY));
+              hLine.setAttribute("x2", String(centerX + size));
+              hLine.setAttribute("y2", String(centerY));
+            }
 
-						if (vLine) {
-							vLine.setAttribute("x1", String(centerX));
-							vLine.setAttribute("y1", String(centerY - size));
-							vLine.setAttribute("x2", String(centerX));
-							vLine.setAttribute("y2", String(centerY + size));
-						}
-					};
+            if (vLine) {
+              vLine.setAttribute("x1", String(centerX));
+              vLine.setAttribute("y1", String(centerY - size));
+              vLine.setAttribute("x2", String(centerX));
+              vLine.setAttribute("y2", String(centerY + size));
+            }
+          };
 
-					// Update crosshairs on all shapes
-					const updateAllCrosshairs = () => {
-						const shapes = containerRef.current?.querySelectorAll(
-							".a9s-annotation, .a9s-selection",
-						);
-						shapes?.forEach((shape) => {
-							updateCrosshairs(shape);
-						});
-					};
+          // Update crosshairs on all shapes
+          const updateAllCrosshairs = () => {
+            const shapes = containerRef.current?.querySelectorAll(
+              ".a9s-annotation, .a9s-selection",
+            );
+            shapes?.forEach((shape) => {
+              updateCrosshairs(shape);
+            });
+          };
 
-					// Watch only for new annotations (childList), not attribute changes
-					// Crosshair positions are updated via OpenSeadragon events instead
-					cleanupCrosshairEffects();
+          // Watch only for new annotations (childList), not attribute changes
+          // Crosshair positions are updated via OpenSeadragon events instead
+          cleanupCrosshairEffects();
 
-					crosshairObserver = new MutationObserver((mutations) => {
-						for (const mutation of mutations) {
-							// Only update on childList changes (new annotations added/removed)
-							if (mutation.type === "childList") {
-								requestAnimationFrame(updateAllCrosshairs);
-								break;
-							}
-						}
-					});
+          crosshairObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              // Only update on childList changes (new annotations added/removed)
+              if (mutation.type === "childList") {
+                requestAnimationFrame(updateAllCrosshairs);
+                break;
+              }
+            }
+          });
 
-					const svgOverlay = containerRef.current?.querySelector(
-						".a9s-annotationlayer",
-					);
-					if (svgOverlay && crosshairObserver) {
-						crosshairObserver.observe(svgOverlay, {
-							childList: true,
-							subtree: true,
-							attributes: false, // Don't watch attributes - too expensive during pan/zoom
-						});
-					}
+          const svgOverlay = containerRef.current?.querySelector(
+            ".a9s-annotationlayer",
+          );
+          if (svgOverlay && crosshairObserver) {
+            crosshairObserver.observe(svgOverlay, {
+              childList: true,
+              subtree: true,
+              attributes: false, // Don't watch attributes - too expensive during pan/zoom
+            });
+          }
 
-					// Update crosshairs when viewport animation completes (after pan/zoom)
-					viewer.addHandler("animation-finish", updateAllCrosshairs);
+          // Update crosshairs when viewport animation completes (after pan/zoom)
+          viewer.addHandler("animation-finish", updateAllCrosshairs);
 
-					// Initial update
-					initialCrosshairTimeout = window.setTimeout(
-						updateAllCrosshairs,
-						VIEWER_CONFIG.crosshair.initialUpdateDelayMs,
-					);
+          // Initial update
+          initialCrosshairTimeout = window.setTimeout(
+            updateAllCrosshairs,
+            VIEWER_CONFIG.crosshair.initialUpdateDelayMs,
+          );
 
-					if (!isDisposed) {
-						setIsReady(true);
-					}
-				};
+          if (!isDisposed) {
+            setIsReady(true);
+          }
+        };
 
-				void initAnnotorious();
-			});
+        void initAnnotorious();
+      });
 
-			return () => {
-				isDisposed = true;
-				cleanupCrosshairEffects();
-				viewer.removeAllHandlers("animation-finish");
-				const instances = viewerInstances.get(container);
-				instances?.anno?.destroy();
-				viewer.destroy();
-				viewerInstances.delete(container);
-				setIsReady(false);
-			};
-		}, [imageUrl]);
+      return () => {
+        isDisposed = true;
+        cleanupCrosshairEffects();
+        viewer.removeAllHandlers("animation-finish");
+        const instances = viewerInstances.get(container);
+        instances?.anno?.destroy();
+        viewer.destroy();
+        viewerInstances.delete(container);
+        setIsReady(false);
+      };
+    }, [imageUrl]);
 
-		// Handle annotation events once Annotorious is ready
-		useEffect(() => {
-			if (!isReady) return;
-			const anno = getInstances()?.anno;
-			if (!anno) return;
+    // Handle annotation events once Annotorious is ready
+    useEffect(() => {
+      if (!isReady) return;
+      const anno = getInstances()?.anno;
+      if (!anno) return;
 
-			const handleUpdate = (w3cAnnotation: W3CAnnotation) => {
-				const coords = parseFragment(w3cAnnotation.target.selector.value);
-				if (coords && onAnnotationUpdate) {
-					onAnnotationUpdate(w3cAnnotation.id, coords);
-				}
-			};
+      const handleUpdate = (w3cAnnotation: W3CAnnotation) => {
+        const coords = parseFragment(w3cAnnotation.target.selector.value);
+        if (coords && onAnnotationUpdate) {
+          onAnnotationUpdate(w3cAnnotation.id, coords);
+        }
+      };
 
-			const handleDelete = (w3cAnnotation: W3CAnnotation) => {
-				if (onAnnotationDelete) {
-					onAnnotationDelete(w3cAnnotation.id);
-				}
-			};
+      const handleDelete = (w3cAnnotation: W3CAnnotation) => {
+        if (onAnnotationDelete) {
+          onAnnotationDelete(w3cAnnotation.id);
+        }
+      };
 
-			const handleSelect = (w3cAnnotation: W3CAnnotation) => {
-				if (onAnnotationSelect) {
-					onAnnotationSelect(w3cAnnotation?.id || null);
-				}
-			};
+      const handleSelect = (w3cAnnotation: W3CAnnotation) => {
+        if (onAnnotationSelect) {
+          onAnnotationSelect(w3cAnnotation?.id || null);
+        }
+      };
 
-			anno.on("updateAnnotation", handleUpdate);
-			anno.on("deleteAnnotation", handleDelete);
-			anno.on("selectAnnotation", handleSelect);
+      anno.on("updateAnnotation", handleUpdate);
+      anno.on("deleteAnnotation", handleDelete);
+      anno.on("selectAnnotation", handleSelect);
 
-			return () => {
-				anno.off("updateAnnotation", handleUpdate);
-				anno.off("deleteAnnotation", handleDelete);
-				anno.off("selectAnnotation", handleSelect);
-			};
-		}, [
-			isReady,
-			onAnnotationUpdate,
-			onAnnotationDelete,
-			onAnnotationSelect,
-			getInstances,
-		]);
+      return () => {
+        anno.off("updateAnnotation", handleUpdate);
+        anno.off("deleteAnnotation", handleDelete);
+        anno.off("selectAnnotation", handleSelect);
+      };
+    }, [
+      isReady,
+      onAnnotationUpdate,
+      onAnnotationDelete,
+      onAnnotationSelect,
+      getInstances,
+    ]);
 
-		// Sync annotations from props
-		useEffect(() => {
-			if (!isReady) return;
-			const anno = getInstances()?.anno;
-			if (!anno) return;
+    // Sync annotations from props
+    useEffect(() => {
+      if (!isReady) return;
+      const anno = getInstances()?.anno;
+      if (!anno) return;
 
-			const w3cAnnotations = annotations.map((a) => toW3C(a, imageUrl));
-			anno.setAnnotations(w3cAnnotations);
-		}, [annotations, imageUrl, isReady, getInstances]);
+      const w3cAnnotations = annotations.map((a) => toW3C(a, imageUrl));
+      anno.setAnnotations(w3cAnnotations);
+    }, [annotations, imageUrl, isReady, getInstances]);
 
-		// Handle selected annotation
-		useEffect(() => {
-			const anno = getInstances()?.anno;
-			if (selectedAnnotationId && anno) {
-				anno.selectAnnotation(selectedAnnotationId);
-				anno.fitBounds(selectedAnnotationId, false);
-			}
-		}, [selectedAnnotationId, getInstances]);
+    // Handle selected annotation
+    useEffect(() => {
+      const anno = getInstances()?.anno;
+      if (selectedAnnotationId && anno) {
+        anno.selectAnnotation(selectedAnnotationId);
+        anno.fitBounds(selectedAnnotationId, false);
+      }
+    }, [selectedAnnotationId, getInstances]);
 
-		// Toggle crosshair visibility
-		useEffect(() => {
-			const container = containerRef.current;
-			if (!container) return;
+    // Toggle crosshair visibility
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
 
-			if (showCrosshairs) {
-				container.classList.remove("hide-crosshairs");
-			} else {
-				container.classList.add("hide-crosshairs");
-			}
-		}, [showCrosshairs]);
+      if (showCrosshairs) {
+        container.classList.remove("hide-crosshairs");
+      } else {
+        container.classList.add("hide-crosshairs");
+      }
+    }, [showCrosshairs]);
 
-		const handleZoomIn = () => {
-			const viewer = getInstances()?.viewer;
-			if (viewer) {
-				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomInFactor);
-				viewer.viewport.applyConstraints();
-			}
-		};
+    const handleZoomIn = () => {
+      const viewer = getInstances()?.viewer;
+      if (viewer) {
+        viewer.viewport.zoomBy(VIEWER_CONFIG.zoomInFactor);
+        viewer.viewport.applyConstraints();
+      }
+    };
 
-		const handleZoomOut = () => {
-			const viewer = getInstances()?.viewer;
-			if (viewer) {
-				viewer.viewport.zoomBy(VIEWER_CONFIG.zoomOutFactor);
-				viewer.viewport.applyConstraints();
-			}
-		};
+    const handleZoomOut = () => {
+      const viewer = getInstances()?.viewer;
+      if (viewer) {
+        viewer.viewport.zoomBy(VIEWER_CONFIG.zoomOutFactor);
+        viewer.viewport.applyConstraints();
+      }
+    };
 
-		const handleHome = () => {
-			const viewer = getInstances()?.viewer;
-			if (viewer) {
-				viewer.viewport.goHome();
-			}
-		};
+    const handleHome = () => {
+      const viewer = getInstances()?.viewer;
+      if (viewer) {
+        viewer.viewport.goHome();
+      }
+    };
 
-		return (
-			<div className="relative h-full w-full">
-				<div ref={containerRef} className="h-full w-full" />
+    return (
+      <div className="relative h-full w-full">
+        <div ref={containerRef} className="h-full w-full" />
 
-				{isReady && (
-					<div className="absolute top-4 left-4 flex gap-1 z-10">
-						<button
-							type="button"
-							onClick={handleZoomIn}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label={strings.viewerControls.zoomIn}
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M12 4v16m8-8H4"
-								/>
-							</svg>
-						</button>
-						<button
-							type="button"
-							onClick={handleZoomOut}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label={strings.viewerControls.zoomOut}
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M20 12H4"
-								/>
-							</svg>
-						</button>
-						<button
-							type="button"
-							onClick={handleHome}
-							className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
-							aria-label={strings.viewerControls.resetView}
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-								/>
-							</svg>
-						</button>
-						<button
-							type="button"
-							onClick={onToggleCrosshairs}
-							className={`p-2 rounded shadow border focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 ${
-								showCrosshairs
-									? "bg-cogapp-charcoal text-cogapp-cream border-cogapp-charcoal hover:bg-cogapp-charcoal/90"
-									: "bg-white hover:bg-gray-100"
-							}`}
-							aria-label={
-								showCrosshairs
-									? strings.viewerControls.hideCrosshairs
-									: strings.viewerControls.showCrosshairs
-							}
-							aria-pressed={showCrosshairs}
-						>
-							<svg
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								aria-hidden="true"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M12 4v4m0 8v4m-8-8h4m8 0h4"
-								/>
-							</svg>
-						</button>
-					</div>
-				)}
-			</div>
-		);
-	},
+        {isReady && (
+          <div className="absolute top-4 left-4 flex gap-1 z-10">
+            <button
+              type="button"
+              onClick={handleZoomIn}
+              className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+              aria-label={strings.viewerControls.zoomIn}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={handleZoomOut}
+              className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+              aria-label={strings.viewerControls.zoomOut}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 12H4"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={handleHome}
+              className="bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 p-2 rounded shadow border"
+              aria-label={strings.viewerControls.resetView}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={onToggleCrosshairs}
+              className={`p-2 rounded shadow border focus:outline-none focus:ring-2 focus:ring-cogapp-lavender focus:ring-offset-2 ${
+                showCrosshairs
+                  ? "bg-cogapp-charcoal text-cogapp-cream border-cogapp-charcoal hover:bg-cogapp-charcoal/90"
+                  : "bg-white hover:bg-gray-100"
+              }`}
+              aria-label={
+                showCrosshairs
+                  ? strings.viewerControls.hideCrosshairs
+                  : strings.viewerControls.showCrosshairs
+              }
+              aria-pressed={showCrosshairs}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v4m0 8v4m-8-8h4m8 0h4"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  },
 );
 
 AnnotatedViewer.displayName = "AnnotatedViewer";
